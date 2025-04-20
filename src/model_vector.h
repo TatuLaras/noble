@@ -11,6 +11,7 @@ typedef struct {
 } ModelVector;
 
 ModelVector modelvec_init(void);
+// Appends a `Model` to the `ModelVector`.
 void modelvec_append(ModelVector *vec, Model model);
 Model *modelvec_get(ModelVector *vec, size_t index);
 void modelvec_free(ModelVector *vec);

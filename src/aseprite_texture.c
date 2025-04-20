@@ -2,7 +2,21 @@
 
 #include "aseprite_texture.h"
 
+// Ignore some warnings from external library
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#endif
+
 #include "cute_aseprite.h"
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
 #include <raylib.h>
 #include <stdint.h>
 #include <stdlib.h>

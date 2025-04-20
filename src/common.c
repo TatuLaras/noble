@@ -1,5 +1,7 @@
 #include "common.h"
 
+#include <math.h>
+#include <raylib.h>
 #include <stdint.h>
 
 uint64_t max(uint64_t a, uint64_t b) {
@@ -24,4 +26,16 @@ float minf(float a, float b) {
     if (a < b)
         return a;
     return b;
+}
+
+float quantize(float value, float interval) {
+    return roundf(value / interval) * interval;
+}
+
+Vector3 vector3_quantize(Vector3 value, float interval) {
+    return (Vector3){
+        .x = quantize(value.x, interval),
+        .y = quantize(value.y, interval),
+        .z = quantize(value.z, interval),
+    };
 }

@@ -1,72 +1,121 @@
 #include "game_interface.h"
 
+#include "adding.h"
+#include "asset_picker.h"
+#include "assets.h"
 #include "common.h"
-#include "math_helpers.h"
 #include "model_vector.h"
+#include "raycast.h"
 #include "raymath.h"
 #include "scene.h"
+#include "selection.h"
 #include "shortcuts.h"
-#include <math.h>
+#include "string_vector.h"
+#include "transform.h"
+#include "ui.h"
 #include <raylib.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define VERTICAL_MOVEMENT_SPEED 3.0
-#define GIZMO_SIZE_ADJUST_SENSITIVITY 0.004
-#define SCROLL_ROTATION_INCREMENT 0.0625 * PI;
+#define GIZMO_SIZE_ADJUST_SENSITIVITY 0.08
+#define TRANSFORM_BASE_SENSITIVITY 0.006
+#define TRANSFORM_SLOW_MODE_MULTIPLIER 0.1
+#define MIN_GRID_DENSITY 0.015625
+#define MAX_GRID_DENSITY 32
 
-typedef enum {
-    TRANSFORM_NONE,
-    TRANSFORM_TRANSLATE,
-    TRANSFORM_ROTATE,
-} TransformMode;
-
-typedef enum { AXIS_X, AXIS_Y, AXIS_Z } Axis;
-
-typedef struct {
-    TransformMode mode;
-    Axis axis;
-} TransformOperation;
-
-static TransformOperation current_transform_operation = {0};
+static TransformOperation transform_operation = {0};
 
 static Scene scene = {0};
 static ShortcutBuffer shortcuts = {0};
 
 static Camera3D camera = {0};
 
-static int quantize_to_grid_enabled = 1;
-static float grid_density = 1.0;
-static int grid_enabled = 1;
-static int gizmos_enabled = 1;
-static float gizmo_size = 1.0;
+static Settings settings = {
+    .quantize_to_grid_enabled = 1,
+    .grid_density = 1.0,
+    .grid_enabled = 1,
+    .gizmos_enabled = 1,
+    .gizmo_size = 1.0,
+    .asset_directory = "/home/tatu/_repos/ebb/assets/",
+    .adding_raycast_include_objects = 1,
+};
 
-static size_t currently_added_entity_id = 0;
-static float currently_added_entity_rotation_angle = 0;
-static int currently_adding_an_entity = 0;
+static EntityAddingState entity_adding_state = {0};
+static EntitySelection entity_selection_state = {0};
+static AssetPickerState asset_picker = {0};
 
-static size_t currently_selected_entity_id = 0;
-static int entity_has_been_selected = 0;
-
-static inline float quantize(float value, float interval) {
-    return roundf(value / interval) * interval;
+static inline void refresh_asset_list(Settings *sett) {
+    stringvec_free(&asset_picker.candidates);
+    asset_picker.candidates = assets_get_list(sett->asset_directory);
 }
 
-static inline Matrix get_targetted_position_translation_matrix(void) {
-    Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
-    Vector3 targetted_position = math_ray_ground_intersection(ray);
+static inline void render_gizmos(Matrix transform) {
+    Vector3 origin = Vector3Transform(Vector3Zero(), transform);
 
-    if (quantize_to_grid_enabled) {
-        targetted_position.x = quantize(targetted_position.x, grid_density);
-        targetted_position.y = quantize(targetted_position.y, grid_density);
-        targetted_position.z = quantize(targetted_position.z, grid_density);
+    Vector3 x_axis =
+        Vector3Transform((Vector3){settings.gizmo_size, 0, 0}, transform);
+    Vector3 y_axis =
+        Vector3Transform((Vector3){0, settings.gizmo_size, 0}, transform);
+    Vector3 z_axis =
+        Vector3Transform((Vector3){0, 0, settings.gizmo_size}, transform);
+
+    DrawSphere(origin, 0.03, WHITE);
+
+    // Transform mode gizmos
+
+    if (transform_operation.mode == TRANSFORM_TRANSLATE) {
+        Vector3 direction;
+        Color color;
+        switch (transform_operation.axis) {
+        case AXIS_X:
+            direction = Vector3Subtract(x_axis, origin);
+            color = RED;
+            break;
+        case AXIS_Y:
+            direction = Vector3Subtract(y_axis, origin);
+            color = GREEN;
+            break;
+        case AXIS_Z:
+            direction = Vector3Subtract(z_axis, origin);
+            color = BLUE;
+            break;
+        }
+
+        direction = Vector3Normalize(direction);
+
+        if (settings.quantize_to_grid_enabled)
+            for (int i = -6; i <= 6; i++)
+                DrawSphere(
+                    Vector3Add(origin,
+                               Vector3Scale(direction,
+                                            (float)i * settings.grid_density)),
+                    0.03, color);
+        DrawLine3D(Vector3Add(origin, Vector3Scale(direction, -100.0)),
+                   Vector3Add(origin, Vector3Scale(direction, 100.0)), color);
+        return;
     }
 
-    Matrix translation = MatrixTranslate(
-        targetted_position.x, targetted_position.y, targetted_position.z);
+    if (transform_operation.mode == TRANSFORM_ROTATE) {
+        DrawLine3D(origin, x_axis, RED);
+        DrawLine3D(origin, y_axis, GREEN);
+        DrawLine3D(origin, z_axis, BLUE);
+        return;
+    }
 
-    return translation;
+    // Normal mode gizmos
+
+    DrawLine3D(origin, x_axis, RED);
+    DrawSphere(x_axis, 0.05, RED);
+
+    DrawLine3D(origin, y_axis, GREEN);
+    DrawSphere(y_axis, 0.05, GREEN);
+
+    DrawLine3D(origin, z_axis, BLUE);
+    DrawSphere(z_axis, 0.05, BLUE);
 }
 
 static void render(void) {
@@ -75,9 +124,9 @@ static void render(void) {
     // Have gray background if waiting for another keystroke for a multi-key
     // shortcut
     if (shortcuts.keypresses_stored == 0)
-        ClearBackground((Color){.r = 0x14, .g = 0x26, .b = 0x32});
+        ClearBackground((Color){.r = 0x32, .g = 0x15, .b = 0x15});
     else
-        ClearBackground(GRAY);
+        ClearBackground((Color){.r = 0x5d, .g = 0x52, .b = 0x52});
 
     BeginMode3D(camera);
 
@@ -90,40 +139,60 @@ static void render(void) {
 
         Model *model = modelvec_get(&scene.models, live_entity->model_index);
 
-        DrawMesh(model->meshes[0], model->materials[0],
-                 live_entity->entity.transform);
+        Matrix transform = live_entity->entity.transform;
 
-        int is_active =
-            (entity_has_been_selected && currently_selected_entity_id == i - 1);
+        int is_active = (entity_selection_state.selected &&
+                         entity_selection_state.entity_id == i - 1);
+        int current_entity_being_transformed =
+            is_active && transform_operation.mode != TRANSFORM_NONE;
 
-        if (gizmos_enabled && is_active) {
-            Vector3 origin =
-                Vector3Transform(Vector3Zero(), live_entity->entity.transform);
-            origin.y += 0.01;
-            Vector3 x_axis = Vector3Transform((Vector3){gizmo_size, 0, 0},
-                                              live_entity->entity.transform);
-            Vector3 y_axis = Vector3Transform((Vector3){0, gizmo_size, 0},
-                                              live_entity->entity.transform);
-            Vector3 z_axis = Vector3Transform((Vector3){0, 0, gizmo_size},
-                                              live_entity->entity.transform);
-            DrawSphere(origin, 0.03, WHITE);
-
-            DrawLine3D(origin, x_axis, RED);
-            DrawSphere(x_axis, 0.05, RED);
-
-            DrawLine3D(origin, y_axis, GREEN);
-            DrawSphere(y_axis, 0.05, GREEN);
-
-            DrawLine3D(origin, z_axis, BLUE);
-            DrawSphere(z_axis, 0.05, BLUE);
+        if (current_entity_being_transformed) {
+            Matrix preview_transform =
+                transform_get_matrix(&settings, &transform_operation);
+            transform = MatrixMultiply(preview_transform,
+                                       live_entity->entity.transform);
         }
+
+        DrawMesh(model->meshes[0], model->materials[0], transform);
+
+        int is_being_added = entity_adding_state.adding &&
+                             entity_adding_state.entity_id == i - 1;
+
+        if (settings.gizmos_enabled && (is_active || is_being_added))
+            render_gizmos(transform);
     }
 
-    if (grid_enabled)
-        DrawGrid(100 / grid_density, grid_density);
+    if (settings.grid_enabled)
+        DrawGrid(100 / settings.grid_density, settings.grid_density);
 
     EndMode3D();
+
+    ui_render(GetScreenWidth(), &asset_picker);
     EndDrawing();
+}
+
+static inline void start_translating(TransformMode mode, Axis axis) {
+    LiveEntity *selected_entity =
+        selection_get_selected_entity(&scene, &entity_selection_state);
+    if (!selected_entity)
+        return;
+
+    transform_start(&settings, &transform_operation, mode, axis,
+                    selected_entity);
+    DisableCursor();
+}
+
+static inline void stop_translating(void) {
+    LiveEntity *selected_entity =
+        selection_get_selected_entity(&scene, &entity_selection_state);
+    if (selected_entity)
+        transform_stop(&settings, &transform_operation, selected_entity);
+    EnableCursor();
+}
+
+static inline void cancel_translate(void) {
+    transform_cancel(&transform_operation);
+    EnableCursor();
 }
 
 static void handle_shortcuts(void) {
@@ -134,49 +203,182 @@ static void handle_shortcuts(void) {
     switch (action) {
 
     case ACTION_TOGGLE_GRID:
-        grid_enabled = !grid_enabled;
+        settings.grid_enabled = !settings.grid_enabled;
         break;
     case ACTION_TOGGLE_GIZMOS:
-        gizmos_enabled = !gizmos_enabled;
+        settings.gizmos_enabled = !settings.gizmos_enabled;
         break;
     case ACTION_TOGGLE_QUANTIZE:
-        quantize_to_grid_enabled = !quantize_to_grid_enabled;
+        settings.quantize_to_grid_enabled = !settings.quantize_to_grid_enabled;
         break;
-    case ACTION_GRID_DENSITY_INCREASE:
-        grid_density /= 2;
-        break;
-    case ACTION_GRID_DENSITY_DECREASE:
-        grid_density *= 2;
+    case ACTION_TOGGLE_ADDING_RAYCAST_INCLUDE_OBJECTS:
+        settings.adding_raycast_include_objects =
+            !settings.adding_raycast_include_objects;
         break;
     case ACTION_OBJECT_DELETE: {
-        if (currently_adding_an_entity) {
-            scene_remove(&scene, currently_added_entity_id);
-            currently_adding_an_entity = 0;
+        if (entity_adding_state.adding) {
+            scene_remove(&scene, entity_adding_state.entity_id);
+            entity_adding_state.adding = 0;
+        } else if (entity_selection_state.selected) {
+            scene_remove(&scene, entity_selection_state.entity_id);
+            selection_deselect_all(&entity_selection_state);
         }
     } break;
 
+    case ACTION_START_PICKING_ASSET:
+        asset_picker_start_search(&asset_picker);
+        break;
+
     case ACTION_OBJECT_START_ROTATE_X:
-        current_transform_operation.mode = TRANSFORM_ROTATE;
-        current_transform_operation.axis = AXIS_X;
-        DisableCursor();
+        start_translating(TRANSFORM_ROTATE, AXIS_X);
+        break;
+    case ACTION_OBJECT_START_ROTATE_Y:
+        start_translating(TRANSFORM_ROTATE, AXIS_Y);
+        break;
+    case ACTION_OBJECT_START_ROTATE_Z:
+        start_translating(TRANSFORM_ROTATE, AXIS_Z);
         break;
 
     case ACTION_OBJECT_START_TRANSLATE_X:
-    case ACTION_OBJECT_START_TRANSLATE_Y:
-    case ACTION_OBJECT_START_TRANSLATE_Z:
-    case ACTION_OBJECT_START_ROTATE_Y:
-    case ACTION_OBJECT_START_ROTATE_Z:
-        printf("Warning: Shortcut action %d not yet implemented.\n", action);
+        start_translating(TRANSFORM_TRANSLATE, AXIS_X);
         break;
+    case ACTION_OBJECT_START_TRANSLATE_Y:
+        start_translating(TRANSFORM_TRANSLATE, AXIS_Y);
+        break;
+    case ACTION_OBJECT_START_TRANSLATE_Z:
+        start_translating(TRANSFORM_TRANSLATE, AXIS_Z);
+        break;
+    case ACTION_GRID_RESET:
+        settings.grid_density = 1;
+        break;
+
     case ACTION_NONE:
         break;
     }
 }
 
+static inline void handle_inputs(void) {
+    // Asset picker UI captures all inputs when active
+    if (asset_picker.picking_asset) {
+        // Select asset
+        if (IsKeyPressed(KEY_ENTER)) {
+            char *asset_identifier = stringvec_get(&asset_picker.matches,
+                                                   asset_picker.selected_match);
+            if (asset_identifier) {
+                strncpy(settings.selected_asset, asset_identifier,
+                        ARRAY_LENGTH(settings.selected_asset) - 1);
+                asset_picker_stop_search(&asset_picker);
+            }
+        }
+
+        asset_picker_input_key(&asset_picker, GetKeyPressed(),
+                               IsKeyDown(KEY_LEFT_CONTROL));
+        return;
+    }
+
+    handle_shortcuts();
+
+    Vector2 mouse_delta = GetMouseDelta();
+    float scroll = GetMouseWheelMove();
+
+    // FPS style movement
+    //  TODO: some easier controls as well as an option
+    if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE)) {
+        float delta_time = GetFrameTime();
+        float vertical_movement = 0;
+
+        if (IsKeyDown(KEY_SPACE))
+            vertical_movement = delta_time * VERTICAL_MOVEMENT_SPEED;
+        else if (IsKeyDown(KEY_C))
+            vertical_movement = delta_time * VERTICAL_MOVEMENT_SPEED * -1;
+
+        camera.position.y += vertical_movement;
+        camera.target.y += vertical_movement;
+
+        UpdateCamera(&camera, CAMERA_FIRST_PERSON);
+        return;
+    }
+
+    if (IsKeyDown(KEY_L)) {
+        settings.gizmo_size -= scroll * GIZMO_SIZE_ADJUST_SENSITIVITY;
+        if (settings.gizmo_size < 0.1)
+            settings.gizmo_size = 0.1;
+    }
+
+    if (IsKeyDown(KEY_Z)) {
+        if (scroll > 0)
+            settings.grid_density /= 2;
+        else if (scroll < 0)
+            settings.grid_density *= 2;
+
+        if (settings.grid_density < MIN_GRID_DENSITY)
+            settings.grid_density = MIN_GRID_DENSITY;
+        if (settings.grid_density > MAX_GRID_DENSITY)
+            settings.grid_density = MAX_GRID_DENSITY;
+        return;
+    }
+
+    if (transform_operation.mode != TRANSFORM_NONE) {
+
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+            stop_translating();
+        if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT))
+            cancel_translate();
+
+        float additional_multiplier = 1;
+        if (IsKeyDown(KEY_LEFT_SHIFT))
+            additional_multiplier = TRANSFORM_SLOW_MODE_MULTIPLIER;
+
+        transform_operation.amount +=
+            mouse_delta.x * TRANSFORM_BASE_SENSITIVITY * additional_multiplier;
+
+        return;
+    }
+
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        selection_deselect_all(&entity_selection_state);
+
+        Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
+        adding_asset_instantiate(&entity_adding_state, &scene, &settings, ray);
+        return;
+    }
+
+    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+        float rotate_by_angle = scroll * ROTATION_SNAP_INCREMENT;
+        Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
+        adding_entity_update(&entity_adding_state, &scene, &settings, ray,
+                             rotate_by_angle);
+        return;
+    }
+
+    if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT) &&
+        entity_adding_state.adding) {
+        selection_entity_select(&entity_selection_state,
+                                entity_adding_state.entity_id);
+        adding_stop(&entity_adding_state);
+        return;
+    }
+
+    // Object seletion
+    if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
+        Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
+        ObjectRaycastResult hit_result = raycast_scene_objects(ray, &scene);
+        selection_deselect_all(&entity_selection_state);
+        if (hit_result.hit_something)
+            selection_entity_select(&entity_selection_state,
+                                    hit_result.entity_id);
+        return;
+    }
+}
+
 void game_init(void) {
+
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(800, 450, "Noble");
     SetTargetFPS(60);
+
+    ui_init();
+    refresh_asset_list(&settings);
 
     scene = scene_init("/home/tatu/_repos/ebb/assets/");
 
@@ -188,109 +390,7 @@ void game_init(void) {
 
 void game_main(void) {
     while (!WindowShouldClose()) {
-        Vector2 mouse_delta = GetMouseDelta();
-
-        handle_shortcuts();
-
-        // FPS style movement
-        //  TODO: some easier controls as well as an option
-        if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE)) {
-            float delta_time = GetFrameTime();
-            float vertical_movement = 0;
-
-            if (IsKeyDown(KEY_SPACE))
-                vertical_movement = delta_time * VERTICAL_MOVEMENT_SPEED;
-            else if (IsKeyDown(KEY_C))
-                vertical_movement = delta_time * VERTICAL_MOVEMENT_SPEED * -1;
-
-            camera.position.y += vertical_movement;
-            camera.target.y += vertical_movement;
-
-            UpdateCamera(&camera, CAMERA_FIRST_PERSON);
-        }
-
-        if (IsKeyDown(KEY_L)) {
-            gizmo_size -= mouse_delta.y * GIZMO_SIZE_ADJUST_SENSITIVITY;
-        }
-
-        // Clamp values
-        if (gizmo_size < 0.1)
-            gizmo_size = 0.1;
-
-        // Add objects to scene on left click
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            currently_adding_an_entity = 1;
-
-            Entity entity = {
-                .asset_identifier = "barrel",
-                .transform = get_targetted_position_translation_matrix(),
-            };
-            currently_added_entity_id = scene_add(&scene, entity);
-        }
-
-        // Update position while mouse left held down
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) &&
-            currently_adding_an_entity) {
-
-            LiveEntity *entity = scene_get(&scene, currently_added_entity_id);
-
-            if (entity) {
-                currently_added_entity_rotation_angle +=
-                    GetMouseWheelMove() * SCROLL_ROTATION_INCREMENT;
-
-                entity->entity.transform = MatrixMultiply(
-                    MatrixRotateY(currently_added_entity_rotation_angle),
-                    get_targetted_position_translation_matrix());
-            }
-        }
-
-        if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
-            currently_adding_an_entity = 0;
-            currently_selected_entity_id = currently_added_entity_id;
-            entity_has_been_selected = 1;
-        }
-
-        // Object seletion
-        if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
-            Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
-            RayCollision collision = {0};
-
-            entity_has_been_selected = 0;
-
-            LiveEntity *live_entity = {0};
-            size_t i = 0;
-            while ((live_entity = scene_get(&scene, i++))) {
-                if (live_entity->is_destroyed)
-                    continue;
-
-                Model *model =
-                    modelvec_get(&scene.models, live_entity->model_index);
-
-                collision = GetRayCollisionMesh(ray, model->meshes[0],
-                                                live_entity->entity.transform);
-
-                if (collision.hit) {
-                    currently_selected_entity_id = i - 1;
-                    entity_has_been_selected = 1;
-                    break;
-                }
-            }
-        }
-
-        if (current_transform_operation.mode != TRANSFORM_NONE &&
-            entity_has_been_selected) {
-            LiveEntity *entity =
-                scene_get(&scene, currently_selected_entity_id);
-
-            if (entity) {
-                if (current_transform_operation.mode == TRANSFORM_ROTATE) {
-                    entity->entity.transform =
-                        MatrixMultiply(MatrixRotateX(mouse_delta.x * 0.004),
-                                       entity->entity.transform);
-                }
-            }
-        }
-
+        handle_inputs();
         render();
     }
 }

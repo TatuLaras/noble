@@ -1,21 +1,29 @@
 #ifndef _STRING_VECTOR
 #define _STRING_VECTOR
 
+// A vector for storing a list of strings.
+
 #include <stddef.h>
 
 typedef struct {
-    char *string_data;
-    size_t string_data_allocated;
-    size_t string_data_used;
-    size_t *string_indices;
-    size_t string_indices_allocated;
-    size_t string_indices_used;
+    char *data;
+    size_t data_allocated;
+    size_t data_used;
+    size_t *indices;
+    size_t indices_allocated;
+    size_t indices_used;
 } StringVector;
 
 StringVector stringvec_init(void);
+StringVector stringvec_clone(StringVector *vec);
 void stringvec_append(StringVector *vec, char *buffer, size_t buffer_size);
 char *stringvec_get(StringVector *vec, size_t index);
 void stringvec_free(StringVector *vec);
 size_t stringvec_count(StringVector *vec);
+// Returns strings in stringvector as a newline-separated string. Ownership of
+// the char* belongs to the caller.
+void stringvec_as_newline_separated(StringVector *vec, char *out_buffer,
+                                    size_t out_buffer_size,
+                                    int max_string_count);
 
 #endif

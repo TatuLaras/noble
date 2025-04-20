@@ -13,7 +13,7 @@
 typedef struct {
     uint32_t version;
     // Typically the name of the .obj file in the assets folder
-    char *asset_identifier;
+    char asset_identifier[200];
     Matrix transform;
 } Entity;
 
@@ -40,7 +40,7 @@ Scene scene_load(const char *filepath);
 Scene scene_init(const char *assets_base_path);
 // Adds a new entity to the scene. Assumes a raylib context is already
 // initialized. Returns the id of the added entity.
-size_t scene_add(Scene *scene, Entity entity);
+int scene_add(Scene *scene, Entity entity, size_t *out_id);
 // Removes an entity from the scene by `ìd`.
 void scene_remove(Scene *scene, size_t id);
 // Gets entity of `scene` by `id`, returns 0 when no entity for that index

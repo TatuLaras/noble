@@ -18,17 +18,21 @@ static Shortcut shortcuts[] = {
         .keypresses = {KEY_Q},
     },
     {
-        .action = ACTION_GRID_DENSITY_INCREASE,
+        .action = ACTION_TOGGLE_ADDING_RAYCAST_INCLUDE_OBJECTS,
+        .keypresses = {KEY_I},
+    },
+    {
+        .action = ACTION_GRID_RESET,
         .keypresses = {KEY_Z},
         .require_shift_down = 1,
     },
     {
-        .action = ACTION_GRID_DENSITY_DECREASE,
-        .keypresses = {KEY_Z},
-    },
-    {
         .action = ACTION_OBJECT_DELETE,
         .keypresses = {KEY_X},
+    },
+    {
+        .action = ACTION_START_PICKING_ASSET,
+        .keypresses = {KEY_F},
     },
     {
         .action = ACTION_OBJECT_START_TRANSLATE_X,

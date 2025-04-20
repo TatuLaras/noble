@@ -24,7 +24,7 @@ Scene scene_init(const char *assets_base_path) {
     return scene;
 }
 
-size_t scene_add(Scene *scene, Entity entity) {
+int scene_add(Scene *scene, Entity entity, size_t *out_id) {
     if (scene->entities_used >= scene->entities_allocated) {
         // Grow buffer
         scene->entities_allocated *= ENTITIES_GROWTH_FACTOR;
@@ -46,8 +46,11 @@ size_t scene_add(Scene *scene, Entity entity) {
         if (!scene_entity)
             break;
 
+        printf("scene asset: %s\n", scene_entity->entity.asset_identifier);
+
         if (!strcmp(entity.asset_identifier,
                     scene_entity->entity.asset_identifier)) {
+            printf("Match found\n");
             live_entity.model_index = scene_entity->model_index;
             match_found = 1;
             break;
@@ -64,13 +67,18 @@ size_t scene_add(Scene *scene, Entity entity) {
         strcat(filepath, ".obj");
 
         Model model = LoadModel(filepath);
+        if (!model.meshCount)
+            return 1;
+
         try_load_corresponding_texture(filepath, &model);
         live_entity.model_index = scene->models.data_used;
         modelvec_append(&scene->models, model);
     }
 
     scene->entities[scene->entities_used++] = live_entity;
-    return scene->entities_used - 1;
+    if (out_id)
+        *out_id = scene->entities_used - 1;
+    return 0;
 }
 
 void scene_remove(Scene *scene, size_t id) {
