@@ -50,7 +50,7 @@ ObjectRaycastResult raycast_scene_objects(Ray ray, Scene *scene) {
         collision = GetRayCollisionMesh(ray, model->meshes[0],
                                         live_entity->entity.transform);
 
-        if (collision.hit) {
+        if (collision.hit && !live_entity->entity.ignore_raycast) {
             int is_closer_than_previous =
                 !result.hit_something ||
                 (Vector3DistanceSqr(ray.position, collision.point) <

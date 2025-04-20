@@ -28,6 +28,6 @@ void adding_entity_update(EntityAddingState *state, Scene *scene,
                           Settings *settings, Ray ray, float rotation_angle);
 
 // Stops the entity adding process
-void adding_stop(EntityAddingState *state);
+void adding_stop(EntityAddingState *state, Scene *scene);
 
 #endif

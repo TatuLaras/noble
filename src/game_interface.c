@@ -64,6 +64,9 @@ static inline void render_gizmos(Matrix transform) {
         Vector3Transform((Vector3){0, 0, settings.gizmo_size}, transform);
 
     DrawSphere(origin, 0.03, WHITE);
+    DrawLine3D(origin, x_axis, RED);
+    DrawLine3D(origin, y_axis, GREEN);
+    DrawLine3D(origin, z_axis, BLUE);
 
     // Transform mode gizmos
 
@@ -100,9 +103,18 @@ static inline void render_gizmos(Matrix transform) {
     }
 
     if (transform_operation.mode == TRANSFORM_ROTATE) {
-        DrawLine3D(origin, x_axis, RED);
-        DrawLine3D(origin, y_axis, GREEN);
-        DrawLine3D(origin, z_axis, BLUE);
+
+        switch (transform_operation.axis) {
+        case AXIS_X:
+            DrawSphere(x_axis, 0.05, RED);
+            break;
+        case AXIS_Y:
+            DrawSphere(y_axis, 0.05, GREEN);
+            break;
+        case AXIS_Z:
+            DrawSphere(z_axis, 0.05, BLUE);
+            break;
+        }
         return;
     }
 
@@ -251,6 +263,18 @@ static void handle_shortcuts(void) {
     case ACTION_GRID_RESET:
         settings.grid_density = 1;
         break;
+    case ACTION_CHANGE_AXIS_X:
+        if (transform_operation.mode != TRANSFORM_NONE)
+            start_translating(transform_operation.mode, AXIS_X);
+        break;
+    case ACTION_CHANGE_AXIS_Y:
+        if (transform_operation.mode != TRANSFORM_NONE)
+            start_translating(transform_operation.mode, AXIS_Y);
+        break;
+    case ACTION_CHANGE_AXIS_Z:
+        if (transform_operation.mode != TRANSFORM_NONE)
+            start_translating(transform_operation.mode, AXIS_Z);
+        break;
 
     case ACTION_NONE:
         break;
@@ -289,7 +313,7 @@ static inline void handle_inputs(void) {
 
         if (IsKeyDown(KEY_SPACE))
             vertical_movement = delta_time * VERTICAL_MOVEMENT_SPEED;
-        else if (IsKeyDown(KEY_C))
+        else if (IsKeyDown(KEY_LEFT_SHIFT))
             vertical_movement = delta_time * VERTICAL_MOVEMENT_SPEED * -1;
 
         camera.position.y += vertical_movement;
@@ -305,7 +329,7 @@ static inline void handle_inputs(void) {
             settings.gizmo_size = 0.1;
     }
 
-    if (IsKeyDown(KEY_Z)) {
+    if (IsKeyDown(KEY_C)) {
         if (scroll > 0)
             settings.grid_density /= 2;
         else if (scroll < 0)
@@ -355,7 +379,7 @@ static inline void handle_inputs(void) {
         entity_adding_state.adding) {
         selection_entity_select(&entity_selection_state,
                                 entity_adding_state.entity_id);
-        adding_stop(&entity_adding_state);
+        adding_stop(&entity_adding_state, &scene);
         return;
     }
 

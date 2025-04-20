@@ -23,12 +23,16 @@ static Shortcut shortcuts[] = {
     },
     {
         .action = ACTION_GRID_RESET,
-        .keypresses = {KEY_Z},
+        .keypresses = {KEY_C},
         .require_shift_down = 1,
     },
     {
         .action = ACTION_OBJECT_DELETE,
-        .keypresses = {KEY_X},
+        .keypresses = {KEY_DELETE},
+    },
+    {
+        .action = ACTION_OBJECT_DELETE,
+        .keypresses = {KEY_BACKSPACE},
     },
     {
         .action = ACTION_START_PICKING_ASSET,
@@ -55,9 +59,18 @@ static Shortcut shortcuts[] = {
         .keypresses = {KEY_R, KEY_Y},
     },
     {
-        .action = ACTION_OBJECT_START_ROTATE_Z,
-        .keypresses = {KEY_R, KEY_Z},
+        .action = ACTION_CHANGE_AXIS_X,
+        .keypresses = {KEY_X},
     },
+    {
+        .action = ACTION_CHANGE_AXIS_Y,
+        .keypresses = {KEY_Y},
+    },
+    {
+        .action = ACTION_CHANGE_AXIS_Z,
+        .keypresses = {KEY_Z},
+    },
+
 };
 
 // Resets the list of keypresses.

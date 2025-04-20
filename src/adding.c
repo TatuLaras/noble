@@ -6,6 +6,7 @@ void adding_asset_instantiate(EntityAddingState *state, Scene *scene,
 
     Entity entity = {
         .transform = raycast_get_desired_model_transform(settings, scene, ray),
+        .ignore_raycast = 1,
     };
     strncpy(entity.asset_identifier, settings->selected_asset,
             ARRAY_LENGTH(entity.asset_identifier));
@@ -29,6 +30,9 @@ void adding_entity_update(EntityAddingState *state, Scene *scene,
         raycast_get_desired_model_transform(settings, scene, ray));
 }
 
-void adding_stop(EntityAddingState *state) {
+void adding_stop(EntityAddingState *state, Scene *scene) {
+    LiveEntity *entity = scene_get(scene, state->entity_id);
+    if (entity)
+        entity->entity.ignore_raycast = 0;
     state->adding = 0;
 }

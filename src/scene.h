@@ -15,6 +15,7 @@ typedef struct {
     // Typically the name of the .obj file in the assets folder
     char asset_identifier[200];
     Matrix transform;
+    int ignore_raycast;
 } Entity;
 
 // Entity data of a spawned in-game entity.
