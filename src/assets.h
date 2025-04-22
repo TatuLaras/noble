@@ -1,6 +1,7 @@
 #ifndef _ASSETS
 #define _ASSETS
-// Functions for listing available assets for picking.
+
+// Functions for handling assets.
 
 #include "string_vector.h"
 #include <stddef.h>

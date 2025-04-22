@@ -1,4 +1,5 @@
 #include "common.h"
+#include "settings.h"
 
 #include <math.h>
 #include <raylib.h>
@@ -32,10 +33,24 @@ float quantize(float value, float interval) {
     return roundf(value / interval) * interval;
 }
 
-Vector3 vector3_quantize(Vector3 value, float interval) {
+Vector3 vector3_quantize(Vector3 value) {
+    if (!settings.quantize_to_grid_enabled)
+        return value;
+
     return (Vector3){
-        .x = quantize(value.x, interval),
-        .y = quantize(value.y, interval),
-        .z = quantize(value.z, interval),
+        .x = quantize(value.x, settings.grid_density),
+        .y = quantize(value.y, settings.grid_density),
+        .z = quantize(value.z, settings.grid_density),
+    };
+}
+
+Vector3 vector3_quantize_custom(Vector3 value, float increment) {
+    if (!settings.quantize_to_grid_enabled)
+        return value;
+
+    return (Vector3){
+        .x = quantize(value.x, increment),
+        .y = quantize(value.y, increment),
+        .z = quantize(value.z, increment),
     };
 }

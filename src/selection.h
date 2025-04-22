@@ -1,17 +1,20 @@
 #ifndef _SELECTION
 #define _SELECTION
 
+// Keep track which entity is selected.
+
 #include "scene.h"
 #include <stddef.h>
 
 typedef struct {
     int selected;
-    size_t entity_id;
+    EntityHandle handle;
 } EntitySelection;
 
-void selection_entity_select(EntitySelection *selection, size_t id);
-void selection_deselect_all(EntitySelection *selection);
-LiveEntity *selection_get_selected_entity(Scene *scene,
-                                          EntitySelection *selection);
+extern EntitySelection entity_selection_state;
+
+void selection_select_entity(EntityHandle handle);
+void selection_deselect_all(void);
+LiveEntity *selection_get_selected_entity(void);
 
 #endif

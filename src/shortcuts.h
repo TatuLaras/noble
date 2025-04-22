@@ -14,6 +14,8 @@ typedef enum {
     ACTION_TOGGLE_QUANTIZE,
     ACTION_TOGGLE_ADDING_RAYCAST_INCLUDE_OBJECTS,
     ACTION_TOGGLE_TILE_MODE,
+    ACTION_TOGGLE_LIGHTING_EDIT_MODE,
+    ACTION_TOGGLE_LIGHTING,
     ACTION_GRID_RESET,
     ACTION_OBJECT_DELETE,
     ACTION_START_PICKING_ASSET,
@@ -47,10 +49,11 @@ typedef struct {
     uint8_t keypresses_stored;
 } ShortcutBuffer;
 
+extern ShortcutBuffer shortcut_buffer;
+
 // Registers the currently pressed key and if an action has taken place it
 // returns that, otherwise returns `ACTION_NONE`.
-ShortcutAction shortcutbuf_get_action(ShortcutBuffer *buf, KeyboardKey key,
-                                      int shift_down, int ctrl_down,
-                                      int alt_down);
+ShortcutAction shortcutbuf_get_action(KeyboardKey key, int shift_down,
+                                      int ctrl_down, int alt_down);
 
 #endif

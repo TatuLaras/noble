@@ -10,8 +10,12 @@ float maxf(float a, float b);
 float minf(float a, float b);
 
 #define ARRAY_LENGTH(x) ((sizeof x) / sizeof(*x))
+#define NAME_MAX_LENGTH 128
 
 float quantize(float value, float interval);
-Vector3 vector3_quantize(Vector3 value, float interval);
+// Quantizes a vector depending on the current snap settings.
+Vector3 vector3_quantize(Vector3 value);
+// Same as `vector3_quantize` but with a custom `increment`.
+Vector3 vector3_quantize_custom(Vector3 value, float increment);
 
 #endif

@@ -3,9 +3,6 @@
 
 // Handles adding objects to the scene
 
-#include "common.h"
-#include "game_interface.h"
-#include "raycast.h"
 #include "scene.h"
 #include <raylib.h>
 #include <stddef.h>
@@ -13,21 +10,21 @@
 
 typedef struct {
     int adding;
-    size_t entity_id;
+    size_t entity_handle;
     float rotation_angle_y;
 } EntityAddingState;
 
+extern EntityAddingState entity_adding_state;
+
 // Instantiates an instance of the currently selected asset in `settings` at
-// `ray` hit point into the `scene`.
-void adding_asset_instantiate(EntityAddingState *state, Scene *scene,
-                              Settings *settings, Ray ray);
+// `ray` hit point into the `scene`. Returns 1 on error.
+int adding_asset_instantiate(Ray ray);
 
 // Updates position and rotation of the current entity being added to the scene
 // (mouse button held down) according to the `ray` hit and rotation_angle.
-void adding_entity_update(EntityAddingState *state, Scene *scene,
-                          Settings *settings, Ray ray, float rotation_angle);
+void adding_entity_update(Ray ray, float rotation_angle);
 
 // Stops the entity adding process
-void adding_stop(EntityAddingState *state, Scene *scene);
+void adding_stop(void);
 
 #endif

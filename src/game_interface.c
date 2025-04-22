@@ -4,15 +4,19 @@
 #include "asset_picker.h"
 #include "assets.h"
 #include "common.h"
+#include "lighting.h"
+#include "lighting_edit.h"
 #include "model_vector.h"
 #include "raycast.h"
 #include "raymath.h"
 #include "scene.h"
 #include "selection.h"
+#include "settings.h"
 #include "shortcuts.h"
 #include "string_vector.h"
 #include "transform.h"
 #include "ui.h"
+#include <assert.h>
 #include <raylib.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -26,31 +30,17 @@
 #define TRANSFORM_SLOW_MODE_MULTIPLIER 0.1
 #define MIN_GRID_DENSITY 0.015625
 #define MAX_GRID_DENSITY 32
+#define LIGHT_SELECT_RADIUS 15
 
-static TransformOperation transform_operation = {0};
-
-static Scene scene = {0};
-static ShortcutBuffer shortcuts = {0};
+static LightingGroupHandle lighting_group_handle;
 
 static Camera3D camera = {0};
 
-static Settings settings = {
-    .quantize_to_grid_enabled = 1,
-    .grid_density = 1.0,
-    .grid_enabled = 1,
-    .gizmos_enabled = 1,
-    .gizmo_size = 1.0,
-    .asset_directory = "/home/tatu/_repos/ebb/assets/",
-    .adding_raycast_include_objects = 1,
-};
+static LightingEditState lighting_edit_state = {0};
 
-static EntityAddingState entity_adding_state = {0};
-static EntitySelection entity_selection_state = {0};
-static AssetPickerState asset_picker = {0};
-
-static inline void refresh_asset_list(Settings *sett) {
+static inline void refresh_asset_list(void) {
     stringvec_free(&asset_picker.candidates);
-    asset_picker.candidates = assets_get_list(sett->asset_directory);
+    asset_picker.candidates = assets_get_list(settings.asset_directory);
 }
 
 static inline void render_gizmos(Matrix transform) {
@@ -130,14 +120,35 @@ static inline void render_gizmos(Matrix transform) {
     DrawSphere(z_axis, 0.05, BLUE);
 }
 
+static void render_light_gizmos(void) {
+    for (size_t i = 0; i < LIGHTING_MAX_LIGHTS_PER_GROUP; i++) {
+        LightSource *light =
+            lighting_scene.groups[lighting_group_handle].lights + i;
+        if (light->type == LIGHT_NULL)
+            break;
+        Vector2 light_pos = GetWorldToScreen(light->position, camera);
+        Vector2 light_base_pos = GetWorldToScreen(
+            (Vector3){light->position.x, 0, light->position.z}, camera);
+
+        DrawLineEx(light_pos, light_base_pos, 2.0, light->color);
+
+        DrawCircle(light_pos.x, light_pos.y, 6, light->color);
+        DrawCircleLines(light_pos.x, light_pos.y, LIGHT_SELECT_RADIUS, GRAY);
+    }
+}
+
 static void render(void) {
     BeginDrawing();
 
     // Have gray background if waiting for another keystroke for a multi-key
     // shortcut
-    if (shortcuts.keypresses_stored == 0)
-        ClearBackground((Color){.r = 0x32, .g = 0x15, .b = 0x15});
-    else
+
+    ClearBackground((Color){.r = 0x32, .g = 0x15, .b = 0x15});
+
+    if (settings.lighting_edit_mode_enabled)
+        ClearBackground(BLACK);
+
+    if (shortcut_buffer.keypresses_stored > 0)
         ClearBackground((Color){.r = 0x5d, .g = 0x52, .b = 0x52});
 
     BeginMode3D(camera);
@@ -145,22 +156,21 @@ static void render(void) {
     size_t i = 0;
     LiveEntity *live_entity = {0};
 
-    while ((live_entity = scene_get(&scene, i++))) {
+    while ((live_entity = scene_get_entity(i++))) {
         if (live_entity->is_destroyed)
             continue;
 
-        Model *model = modelvec_get(&scene.models, live_entity->model_index);
+        Model *model = modelvec_get(&scene.models, live_entity->model_id);
 
         Matrix transform = live_entity->entity.transform;
 
         int is_active = (entity_selection_state.selected &&
-                         entity_selection_state.entity_id == i - 1);
+                         entity_selection_state.handle == i - 1);
         int current_entity_being_transformed =
             is_active && transform_operation.mode != TRANSFORM_NONE;
 
         if (current_entity_being_transformed) {
-            Matrix preview_transform =
-                transform_get_matrix(&settings, &transform_operation);
+            Matrix preview_transform = transform_get_matrix();
             transform = MatrixMultiply(preview_transform,
                                        live_entity->entity.transform);
         }
@@ -168,7 +178,7 @@ static void render(void) {
         DrawMesh(model->meshes[0], model->materials[0], transform);
 
         int is_being_added = entity_adding_state.adding &&
-                             entity_adding_state.entity_id == i - 1;
+                             entity_adding_state.entity_handle == i - 1;
 
         if (settings.gizmos_enabled && (is_active || is_being_added))
             render_gizmos(transform);
@@ -179,38 +189,38 @@ static void render(void) {
 
     EndMode3D();
 
-    ui_render(GetScreenWidth(), &asset_picker);
+    if (settings.lighting_edit_mode_enabled && settings.gizmos_enabled)
+        render_light_gizmos();
+
+    ui_render(GetScreenWidth(), GetScreenHeight(), &asset_picker);
     EndDrawing();
 }
 
 static inline void start_translating(TransformMode mode, Axis axis) {
-    LiveEntity *selected_entity =
-        selection_get_selected_entity(&scene, &entity_selection_state);
+    LiveEntity *selected_entity = selection_get_selected_entity();
     if (!selected_entity)
         return;
 
-    transform_start(&settings, &transform_operation, mode, axis,
-                    selected_entity);
+    transform_start(mode, axis, selected_entity);
     DisableCursor();
 }
 
-static inline void stop_translating(void) {
-    LiveEntity *selected_entity =
-        selection_get_selected_entity(&scene, &entity_selection_state);
+static inline void stop_transforming(void) {
+    LiveEntity *selected_entity = selection_get_selected_entity();
     if (selected_entity)
-        transform_stop(&settings, &transform_operation, selected_entity);
+        transform_stop(selected_entity);
     EnableCursor();
 }
 
-static inline void cancel_translate(void) {
-    transform_cancel(&transform_operation);
+static inline void cancel_transform(void) {
+    transform_cancel();
     EnableCursor();
 }
 
 static void handle_shortcuts(void) {
     ShortcutAction action = shortcutbuf_get_action(
-        &shortcuts, GetKeyPressed(), IsKeyDown(KEY_LEFT_SHIFT),
-        IsKeyDown(KEY_LEFT_CONTROL), IsKeyDown(KEY_LEFT_ALT));
+        GetKeyPressed(), IsKeyDown(KEY_LEFT_SHIFT), IsKeyDown(KEY_LEFT_CONTROL),
+        IsKeyDown(KEY_LEFT_ALT));
 
     switch (action) {
 
@@ -227,18 +237,27 @@ static void handle_shortcuts(void) {
         settings.adding_raycast_include_objects =
             !settings.adding_raycast_include_objects;
         break;
+    case ACTION_TOGGLE_LIGHTING_EDIT_MODE:
+        settings.lighting_edit_mode_enabled =
+            !settings.lighting_edit_mode_enabled;
+        break;
+    case ACTION_TOGGLE_LIGHTING:
+        settings.lighting_enabled = !settings.lighting_enabled;
+        lighting_scene_set_enabled(settings.lighting_enabled);
+        break;
+
     case ACTION_OBJECT_DELETE: {
         if (entity_adding_state.adding) {
-            scene_remove(&scene, entity_adding_state.entity_id);
+            scene_remove(entity_adding_state.entity_handle);
             entity_adding_state.adding = 0;
         } else if (entity_selection_state.selected) {
-            scene_remove(&scene, entity_selection_state.entity_id);
-            selection_deselect_all(&entity_selection_state);
+            scene_remove(entity_selection_state.handle);
+            selection_deselect_all();
         }
     } break;
 
     case ACTION_START_PICKING_ASSET:
-        asset_picker_start_search(&asset_picker);
+        asset_picker_start_search();
         break;
 
     case ACTION_OBJECT_START_ROTATE_X:
@@ -278,10 +297,14 @@ static void handle_shortcuts(void) {
 
     case ACTION_NONE:
         break;
+    case ACTION_TOGGLE_TILE_MODE:
+        printf("Unimplemented\n");
+        break;
     }
 }
 
 static inline void handle_inputs(void) {
+
     // Asset picker UI captures all inputs when active
     if (asset_picker.picking_asset) {
         // Select asset
@@ -291,16 +314,13 @@ static inline void handle_inputs(void) {
             if (asset_identifier) {
                 strncpy(settings.selected_asset, asset_identifier,
                         ARRAY_LENGTH(settings.selected_asset) - 1);
-                asset_picker_stop_search(&asset_picker);
+                asset_picker_stop_search();
             }
         }
 
-        asset_picker_input_key(&asset_picker, GetKeyPressed(),
-                               IsKeyDown(KEY_LEFT_CONTROL));
+        asset_picker_input_key(GetKeyPressed(), IsKeyDown(KEY_LEFT_CONTROL));
         return;
     }
-
-    handle_shortcuts();
 
     Vector2 mouse_delta = GetMouseDelta();
     float scroll = GetMouseWheelMove();
@@ -323,8 +343,8 @@ static inline void handle_inputs(void) {
         return;
     }
 
-    if (IsKeyDown(KEY_L)) {
-        settings.gizmo_size -= scroll * GIZMO_SIZE_ADJUST_SENSITIVITY;
+    if (IsKeyDown(KEY_V)) {
+        settings.gizmo_size += scroll * GIZMO_SIZE_ADJUST_SENSITIVITY;
         if (settings.gizmo_size < 0.1)
             settings.gizmo_size = 0.1;
     }
@@ -342,12 +362,58 @@ static inline void handle_inputs(void) {
         return;
     }
 
+    handle_shortcuts();
+
+    // Lighting edit
+    if (settings.lighting_edit_mode_enabled) {
+        if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
+        }
+
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
+            lighting_edit_add_light(&lighting_edit_state, lighting_group_handle,
+                                    ray);
+            DisableCursor();
+        }
+
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) &&
+            lighting_edit_state.is_light_added) {
+
+            LightSource *light = lighting_group_get_light(
+                lighting_group_handle,
+                lighting_edit_state.currently_added_light);
+            if (!light)
+                return;
+
+            float additional_multiplier = 1;
+            if (IsKeyDown(KEY_LEFT_SHIFT))
+                additional_multiplier = TRANSFORM_SLOW_MODE_MULTIPLIER;
+
+            light->position.y += mouse_delta.x * TRANSFORM_BASE_SENSITIVITY *
+                                 additional_multiplier;
+
+            light_source_update(lighting_group_handle,
+                                lighting_edit_state.currently_added_light);
+        }
+
+        if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT) &&
+            lighting_edit_state.is_light_added) {
+            lighting_edit_state.is_light_added = 0;
+            EnableCursor();
+        }
+
+        return;
+    } else if (lighting_edit_state.is_light_added) {
+        lighting_edit_state.is_light_added = 0;
+        EnableCursor();
+    }
+
     if (transform_operation.mode != TRANSFORM_NONE) {
 
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
-            stop_translating();
+            stop_transforming();
         if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT))
-            cancel_translate();
+            cancel_transform();
 
         float additional_multiplier = 1;
         if (IsKeyDown(KEY_LEFT_SHIFT))
@@ -359,38 +425,42 @@ static inline void handle_inputs(void) {
         return;
     }
 
+    // Object instantiation
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-        selection_deselect_all(&entity_selection_state);
+        selection_deselect_all();
 
         Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
-        adding_asset_instantiate(&entity_adding_state, &scene, &settings, ray);
+        if (!adding_asset_instantiate(ray)) {
+            LiveEntity *entity =
+                scene_get_entity(entity_adding_state.entity_handle);
+            lighting_group_add_entity(lighting_group_handle, entity);
+        }
         return;
     }
 
+    // Update added object while mouse down
     if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
         float rotate_by_angle = scroll * ROTATION_SNAP_INCREMENT;
         Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
-        adding_entity_update(&entity_adding_state, &scene, &settings, ray,
-                             rotate_by_angle);
+        adding_entity_update(ray, rotate_by_angle);
         return;
     }
 
     if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT) &&
         entity_adding_state.adding) {
-        selection_entity_select(&entity_selection_state,
-                                entity_adding_state.entity_id);
-        adding_stop(&entity_adding_state, &scene);
+        selection_select_entity(entity_adding_state.entity_handle);
+
+        adding_stop();
         return;
     }
 
     // Object seletion
     if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
         Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
-        ObjectRaycastResult hit_result = raycast_scene_objects(ray, &scene);
-        selection_deselect_all(&entity_selection_state);
+        ObjectRaycastResult hit_result = raycast_scene_objects(ray);
+        selection_deselect_all();
         if (hit_result.hit_something)
-            selection_entity_select(&entity_selection_state,
-                                    hit_result.entity_id);
+            selection_select_entity(hit_result.entity_id);
         return;
     }
 }
@@ -402,9 +472,15 @@ void game_init(void) {
     SetTargetFPS(60);
 
     ui_init();
-    refresh_asset_list(&settings);
+    refresh_asset_list();
 
-    scene = scene_init("/home/tatu/_repos/ebb/assets/");
+    scene_init("/home/tatu/_repos/ebb/assets/");
+    lighting_scene_init();
+
+    lighting_group_handle =
+        lighting_group_create((Color){0x21, 0x0d, 0x1f, 255});
+
+    lighting_scene_set_enabled(settings.lighting_enabled);
 
     camera.position = (Vector3){0.0f, 6.0f, 6.0f};
     camera.target = (Vector3){0.0f, 0.0f, 0.0f};
@@ -420,6 +496,6 @@ void game_main(void) {
 }
 
 void game_deinit(void) {
-    scene_free(&scene);
+    scene_free();
     CloseWindow();
 }

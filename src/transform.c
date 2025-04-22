@@ -7,24 +7,20 @@
 
 #define ROTATION_SPEED_MULTIPLIER 1
 
-void transform_operation_apply(Settings *settings, LiveEntity *live_entity,
-                               TransformOperation *operation) {
-    assert(operation);
-    assert(settings);
+TransformOperation transform_operation = {0};
+
+// Commits the transform operation to the entity transform.
+static void transform_operation_apply(LiveEntity *live_entity) {
     assert(live_entity);
 
     live_entity->entity.transform =
-        MatrixMultiply(transform_get_matrix(settings, operation),
-                       live_entity->entity.transform);
+        MatrixMultiply(transform_get_matrix(), live_entity->entity.transform);
 }
 
-Matrix transform_get_matrix(Settings *settings, TransformOperation *operation) {
-    assert(operation);
-    assert(settings);
-
+Matrix transform_get_matrix(void) {
     Vector3 axis_transform;
 
-    switch (operation->axis) {
+    switch (transform_operation.axis) {
     case AXIS_X:
         axis_transform = (Vector3){1.0, 0, 0};
         break;
@@ -36,19 +32,16 @@ Matrix transform_get_matrix(Settings *settings, TransformOperation *operation) {
         break;
     }
 
-    axis_transform = Vector3Scale(axis_transform, operation->amount);
+    axis_transform = Vector3Scale(axis_transform, transform_operation.amount);
 
-    switch (operation->mode) {
+    switch (transform_operation.mode) {
     case TRANSFORM_TRANSLATE:
-        if (settings->quantize_to_grid_enabled)
-            axis_transform =
-                vector3_quantize(axis_transform, settings->grid_density);
+        axis_transform = vector3_quantize(axis_transform);
         return MatrixTranslate(axis_transform.x, axis_transform.y,
                                axis_transform.z);
     case TRANSFORM_ROTATE:
-        if (settings->quantize_to_grid_enabled)
-            axis_transform =
-                vector3_quantize(axis_transform, ROTATION_SNAP_INCREMENT);
+        axis_transform =
+            vector3_quantize_custom(axis_transform, ROTATION_SNAP_INCREMENT);
         return MatrixRotateXYZ(axis_transform);
     case TRANSFORM_NONE:
         return MatrixIdentity();
@@ -57,35 +50,29 @@ Matrix transform_get_matrix(Settings *settings, TransformOperation *operation) {
     return MatrixIdentity();
 }
 
-void transform_start(Settings *settings, TransformOperation *operation,
-                     TransformMode mode, Axis axis, LiveEntity *live_entity) {
+void transform_start(TransformMode mode, Axis axis, LiveEntity *live_entity) {
     assert(live_entity);
-    assert(operation);
-    assert(settings);
 
     // Apply previous if needed
-    if (operation->mode != TRANSFORM_NONE) {
-        transform_operation_apply(settings, live_entity, operation);
+    if (transform_operation.mode != TRANSFORM_NONE) {
+        transform_operation_apply(live_entity);
     }
 
-    operation->mode = mode;
-    operation->axis = axis;
-    operation->amount = 0;
+    transform_operation.mode = mode;
+    transform_operation.axis = axis;
+    transform_operation.amount = 0;
 }
 
-void transform_stop(Settings *settings, TransformOperation *operation,
-                    LiveEntity *live_entity) {
+void transform_stop(LiveEntity *live_entity) {
     assert(live_entity);
-    assert(operation);
-    assert(settings);
 
-    if (operation->mode == TRANSFORM_NONE)
+    if (transform_operation.mode == TRANSFORM_NONE)
         return;
 
-    transform_operation_apply(settings, live_entity, operation);
-    operation->mode = TRANSFORM_NONE;
+    transform_operation_apply(live_entity);
+    transform_operation.mode = TRANSFORM_NONE;
 }
 
-void transform_cancel(TransformOperation *operation) {
-    operation->mode = TRANSFORM_NONE;
+void transform_cancel(void) {
+    transform_operation.mode = TRANSFORM_NONE;
 }

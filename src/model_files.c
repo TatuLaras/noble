@@ -16,6 +16,7 @@ static uint64_t file_last_modified(const char *filepath) {
     return attr.st_mtim.tv_sec;
 }
 
+// Replaces last three characters with "aseprite".
 static char *path_get_corresponding_texture_file(const char *src) {
     size_t length = strlen(src);
     if (length < 3)

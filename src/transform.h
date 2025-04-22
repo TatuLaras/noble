@@ -1,10 +1,11 @@
 #ifndef _TRANSFORM
 #define _TRANSFORM
 
-#include "game_interface.h"
+// Provides functions for providing entity transform controls to the user.
+
 #include "scene.h"
 
-#define ROTATION_SNAP_INCREMENT 0.0625 * PI
+#define ROTATION_SNAP_INCREMENT (PI / 8)
 
 typedef enum {
     TRANSFORM_NONE,
@@ -20,16 +21,18 @@ typedef struct {
     float amount;
 } TransformOperation;
 
-void transform_operation_apply(Settings *settings, LiveEntity *live_entity,
-                               TransformOperation *operation);
+extern TransformOperation transform_operation;
 
-Matrix transform_get_matrix(Settings *settings, TransformOperation *operation);
+// Gets an equivalent transformation matrix from current transform operation.
+Matrix transform_get_matrix(void);
 
-void transform_start(Settings *settings, TransformOperation *operation,
-                     TransformMode mode, Axis axis, LiveEntity *live_entity);
-void transform_stop(Settings *settings, TransformOperation *operation,
-                    LiveEntity *live_entity);
+// Starts the transforming process for an entity.
+void transform_start(TransformMode mode, Axis axis, LiveEntity *live_entity);
+// Stops the transforming process while committing new transform into the
+// entitys transform.
+void transform_stop(LiveEntity *live_entity);
 
-void transform_cancel(TransformOperation *operation);
+// Stops the transforming process without committing to the entity transform.
+void transform_cancel(void);
 
 #endif

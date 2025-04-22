@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdio.h>
 
+ShortcutBuffer shortcut_buffer = {0};
+
 static Shortcut shortcuts[] = {
     {
         .action = ACTION_TOGGLE_GRID,
@@ -20,6 +22,14 @@ static Shortcut shortcuts[] = {
     {
         .action = ACTION_TOGGLE_ADDING_RAYCAST_INCLUDE_OBJECTS,
         .keypresses = {KEY_I},
+    },
+    {
+        .action = ACTION_TOGGLE_LIGHTING_EDIT_MODE,
+        .keypresses = {KEY_L},
+    },
+    {
+        .action = ACTION_TOGGLE_LIGHTING,
+        .keypresses = {KEY_S},
     },
     {
         .action = ACTION_GRID_RESET,
@@ -59,6 +69,10 @@ static Shortcut shortcuts[] = {
         .keypresses = {KEY_R, KEY_Y},
     },
     {
+        .action = ACTION_OBJECT_START_ROTATE_Z,
+        .keypresses = {KEY_R, KEY_Z},
+    },
+    {
         .action = ACTION_CHANGE_AXIS_X,
         .keypresses = {KEY_X},
     },
@@ -74,14 +88,14 @@ static Shortcut shortcuts[] = {
 };
 
 // Resets the list of keypresses.
-static void flush_keypress_buffer(ShortcutBuffer *buf) {
-    buf->keypresses_stored = 0;
+static void flush_keypress_buffer(void) {
+    shortcut_buffer.keypresses_stored = 0;
 }
 
 // Search the list of shortcuts and return match if found, flush keypress buffer
 // if not even a partial (starts with) match is found.
-static Shortcut get_matching_shortcut(ShortcutBuffer *buf, int shift_down,
-                                      int ctrl_down, int alt_down) {
+static Shortcut get_matching_shortcut(int shift_down, int ctrl_down,
+                                      int alt_down) {
     int partial_match_exists = 0;
     for (size_t i = 0; i < ARRAY_LENGTH(shortcuts); i++) {
 
@@ -93,12 +107,12 @@ static Shortcut get_matching_shortcut(ShortcutBuffer *buf, int shift_down,
         ShortcutMatchType match_type = MATCH_FULL;
         size_t j = 0;
         while (j < 4 && shortcuts[i].keypresses[j]) {
-            if (j >= buf->keypresses_stored) {
+            if (j >= shortcut_buffer.keypresses_stored) {
                 match_type = MATCH_PARTIAL;
                 break;
             }
 
-            if (shortcuts[i].keypresses[j] != buf->keypresses[j]) {
+            if (shortcuts[i].keypresses[j] != shortcut_buffer.keypresses[j]) {
                 match_type = MATCH_NONE;
                 break;
             }
@@ -113,39 +127,38 @@ static Shortcut get_matching_shortcut(ShortcutBuffer *buf, int shift_down,
     }
 
     if (!partial_match_exists)
-        flush_keypress_buffer(buf);
+        flush_keypress_buffer();
 
     return (Shortcut){0};
 }
 
 // Adds a key to the list of keypresses.
-static void append_key(ShortcutBuffer *buf, KeyboardKey key) {
-    if (buf->keypresses_stored >= 4)
+static void append_key(KeyboardKey key) {
+    if (shortcut_buffer.keypresses_stored >= 4)
         return;
 
-    buf->keypresses[buf->keypresses_stored++] = key;
+    shortcut_buffer.keypresses[shortcut_buffer.keypresses_stored++] = key;
 }
 
-ShortcutAction shortcutbuf_get_action(ShortcutBuffer *buf, KeyboardKey key,
-                                      int shift_down, int ctrl_down,
-                                      int alt_down) {
+ShortcutAction shortcutbuf_get_action(KeyboardKey key, int shift_down,
+                                      int ctrl_down, int alt_down) {
     if (key == KEY_NULL)
         return ACTION_NONE;
 
     if (key == KEY_ESCAPE) {
-        flush_keypress_buffer(buf);
+        flush_keypress_buffer();
         return ACTION_NONE;
     }
 
-    append_key(buf, key);
+    append_key(key);
 
     Shortcut active_shortcut =
-        get_matching_shortcut(buf, shift_down, ctrl_down, alt_down);
+        get_matching_shortcut(shift_down, ctrl_down, alt_down);
 
     if (active_shortcut.action == ACTION_NONE)
         return ACTION_NONE;
 
-    flush_keypress_buffer(buf);
+    flush_keypress_buffer();
 
     // return ACTION_NONE;
 

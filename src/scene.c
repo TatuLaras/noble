@@ -1,4 +1,5 @@
 #include "scene.h"
+
 #include "model_files.h"
 #include "model_vector.h"
 #include <assert.h>
@@ -11,26 +12,28 @@
 #define ENTITIES_STARTING_SIZE 4
 #define ENTITIES_GROWTH_FACTOR 2
 
-void scene_store(Scene *scene, const char *filepath);
-Scene scene_load(const char *filepath);
+Scene scene = {0};
 
-Scene scene_init(const char *assets_base_path) {
-    Scene scene = {
+void scene_init(const char *assets_base_path) {
+    Scene new_scene = {
         .models = modelvec_init(),
         .entities = malloc(ENTITIES_STARTING_SIZE * sizeof(LiveEntity)),
         .entities_allocated = ENTITIES_STARTING_SIZE,
     };
-    strncpy(scene.assets_base_path, assets_base_path, MAX_PATH_LENGTH);
-    return scene;
+    scene = new_scene;
+    strncpy(scene.assets_base_path, assets_base_path, MAX_PATH_LENGTH - 1);
 }
 
-int scene_add(Scene *scene, Entity entity, size_t *out_id) {
-    if (scene->entities_used >= scene->entities_allocated) {
+int scene_add(Entity entity, EntityHandle *out_entity_handle) {
+    if (*entity.asset_identifier == 0)
+        return 1;
+
+    if (scene.entities_used >= scene.entities_allocated) {
         // Grow buffer
-        scene->entities_allocated *= ENTITIES_GROWTH_FACTOR;
-        scene->entities = realloc(scene->entities, scene->entities_allocated *
-                                                       sizeof(LiveEntity));
-        assert(scene->entities);
+        scene.entities_allocated *= ENTITIES_GROWTH_FACTOR;
+        scene.entities = realloc(scene.entities,
+                                 scene.entities_allocated * sizeof(LiveEntity));
+        assert(scene.entities);
     }
 
     LiveEntity live_entity = {
@@ -42,16 +45,13 @@ int scene_add(Scene *scene, Entity entity, size_t *out_id) {
     LiveEntity *scene_entity = 0;
     int match_found = 0;
     while (1) {
-        scene_entity = scene_get(scene, i++);
+        scene_entity = scene_get_entity(i++);
         if (!scene_entity)
             break;
 
-        printf("scene asset: %s\n", scene_entity->entity.asset_identifier);
-
         if (!strcmp(entity.asset_identifier,
                     scene_entity->entity.asset_identifier)) {
-            printf("Match found\n");
-            live_entity.model_index = scene_entity->model_index;
+            live_entity.model_id = scene_entity->model_id;
             match_found = 1;
             break;
         }
@@ -59,10 +59,13 @@ int scene_add(Scene *scene, Entity entity, size_t *out_id) {
 
     // If not, load model
     if (!match_found) {
-        printf("LOAD\n");
-        // TODO: safety
         char filepath[MAX_PATH_LENGTH + 1] = {0};
-        strcpy(filepath, scene->assets_base_path);
+        if (strlen(scene.assets_base_path) + strlen(entity.asset_identifier) +
+                4 >
+            MAX_PATH_LENGTH)
+            return 1;
+
+        strcpy(filepath, scene.assets_base_path);
         strcat(filepath, entity.asset_identifier);
         strcat(filepath, ".obj");
 
@@ -71,41 +74,36 @@ int scene_add(Scene *scene, Entity entity, size_t *out_id) {
             return 1;
 
         try_load_corresponding_texture(filepath, &model);
-        live_entity.model_index = scene->models.data_used;
-        modelvec_append(&scene->models, model);
+        live_entity.model_id = scene.models.data_used;
+        modelvec_append(&scene.models, model);
     }
 
-    scene->entities[scene->entities_used++] = live_entity;
-    if (out_id)
-        *out_id = scene->entities_used - 1;
+    scene.entities[scene.entities_used++] = live_entity;
+
+    if (out_entity_handle)
+        *out_entity_handle = scene.entities_used - 1;
+
     return 0;
 }
 
-void scene_remove(Scene *scene, size_t id) {
-    if (id >= scene->entities_used)
-        return;
-
-    //  TODO: Unload models if no others use it?
-    scene->entities[id].is_destroyed = 1;
+void scene_remove(EntityHandle handle) {
+    if (handle < scene.entities_used)
+        scene.entities[handle].is_destroyed = 1;
 }
 
-LiveEntity *scene_get(Scene *scene, size_t id) {
-    if (id >= scene->entities_used)
+LiveEntity *scene_get_entity(EntityHandle handle) {
+    if (handle >= scene.entities_used)
         return 0;
-
-    return scene->entities + id;
+    return scene.entities + handle;
 }
 
-void scene_free(Scene *scene) {
+void scene_free(void) {
     size_t i = 0;
-    while (1) {
-        Model *model = modelvec_get(&scene->models, i++);
-        if (!model)
-            break;
+    Model *model = 0;
+    while ((model = modelvec_get(&scene.models, i++)))
         UnloadModel(*model);
-    }
 
-    modelvec_free(&scene->models);
-    if (scene->entities)
-        free(scene->entities);
+    modelvec_free(&scene.models);
+    if (scene.entities)
+        free(scene.entities);
 }
