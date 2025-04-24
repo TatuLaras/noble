@@ -6,6 +6,7 @@
 typedef struct {
     int quantize_to_grid_enabled;
     float grid_density;
+    int fps_controls_enabled;
     int grid_enabled;
     int gizmos_enabled;
     int adding_raycast_include_objects;

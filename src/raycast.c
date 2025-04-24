@@ -37,9 +37,10 @@ ObjectRaycastResult raycast_scene_objects(Ray ray) {
         if (live_entity->is_destroyed)
             continue;
 
-        Model *model = modelvec_get(&scene.models, live_entity->model_id);
+        ModelData *model_data =
+            modelvec_get(&scene.models, live_entity->model_handle);
 
-        collision = GetRayCollisionMesh(ray, model->meshes[0],
+        collision = GetRayCollisionMesh(ray, model_data->model.meshes[0],
                                         live_entity->entity.transform);
 
         if (collision.hit && !live_entity->entity.ignore_raycast) {

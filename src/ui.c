@@ -23,6 +23,10 @@
 #pragma GCC diagnostic pop
 #endif
 
+#define PROPERTIES_PANEL_WIDTH 140
+
+static uint16_t properties_menu_height = 0;
+
 static inline void render_status_bar(Rectangle rect) {
     char status_string[256] = {0};
 
@@ -87,4 +91,19 @@ void ui_render(uint16_t screen_width, uint16_t screen_height,
                             30 * ASSET_PICKER_MATCHES_MAX_COUNT + 4},
                 newline_separated_matches, 0, (int *)&picker->selected_match);
     y += 200;
+}
+
+Rectangle ui_properties_menu_reserve_height(uint16_t height) {
+    Rectangle rect = {0, properties_menu_height, PROPERTIES_PANEL_WIDTH,
+                      height};
+    properties_menu_height += height;
+    return rect;
+}
+
+void ui_properties_menu_reset(void) {
+    properties_menu_height = 0;
+}
+
+Rectangle ui_properties_menu_get_rect(void) {
+    return (Rectangle){0, 0, PROPERTIES_PANEL_WIDTH, properties_menu_height};
 }

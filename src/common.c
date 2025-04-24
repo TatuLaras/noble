@@ -33,6 +33,13 @@ float quantize(float value, float interval) {
     return roundf(value / interval) * interval;
 }
 
+float scalar_quantize(float value) {
+    if (!settings.quantize_to_grid_enabled)
+        return value;
+
+    return quantize(value, settings.grid_density);
+}
+
 Vector3 vector3_quantize(Vector3 value) {
     if (!settings.quantize_to_grid_enabled)
         return value;

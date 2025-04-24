@@ -1,10 +1,14 @@
 #include "lighting.h"
 
+#include "lighting_edit.h"
 #include "model_vector.h"
 #include "scene.h"
+#include "transform.h"
 #include <assert.h>
 #include <raylib.h>
+#include <raymath.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -12,6 +16,8 @@
 #define GROWTH_FACTOR 2
 
 static const char *shader_path = "resources/shaders/vertex_lighting.vert";
+Shader unlit_shader = {0};
+
 LightingScene lighting_scene = {0};
 
 static LightingGroupHandle lighting_scene_add_group(LightingGroup group) {
@@ -25,13 +31,6 @@ static LightingGroupHandle lighting_scene_add_group(LightingGroup group) {
 
     lighting_scene.groups[lighting_scene.groups_size++] = group;
     return lighting_scene.groups_size - 1;
-}
-
-static LightingGroup *lighting_scene_get_group(LightingGroupHandle handle) {
-    if (handle >= lighting_scene.groups_size)
-        return 0;
-
-    return lighting_scene.groups + handle;
 }
 
 static inline void update_shader_data(LightingGroupHandle handle) {
@@ -55,6 +54,13 @@ static inline void update_shader_data(LightingGroupHandle handle) {
     }
 }
 
+LightingGroup *lighting_scene_get_group(LightingGroupHandle handle) {
+    if (handle >= lighting_scene.groups_size)
+        return 0;
+
+    return lighting_scene.groups + handle;
+}
+
 int light_source_update(LightingGroupHandle group_handle,
                         LightSourceHandle light_handle) {
     LightingGroup *group = lighting_scene_get_group(group_handle);
@@ -71,11 +77,21 @@ int light_source_update(LightingGroupHandle group_handle,
                    SHADER_UNIFORM_INT);
     SetShaderValue(group->shader, light->intensity_location, &light->intensity,
                    SHADER_UNIFORM_FLOAT);
+    SetShaderValue(group->shader, light->intensity_cap_location,
+                   &light->intensity_cap, SHADER_UNIFORM_FLOAT);
     SetShaderValue(group->shader, light->type_location, &light->type,
                    SHADER_UNIFORM_INT);
 
-    float position[3] = {light->position.x, light->position.y,
-                         light->position.z};
+    // If a transform is being performed we want to preview the effects of the
+    // lighting before committing, hence this.
+    Vector3 light_pos = light->position;
+    if (lighting_edit_state.is_light_selected &&
+        lighting_edit_state.currently_selected_light == light_handle &&
+        transform_operation.mode != TRANSFORM_NONE) {
+        light_pos =
+            Vector3Add(light_pos, lighting_edit_transform_get_delta_vector());
+    }
+    float position[3] = {light_pos.x, light_pos.y, light_pos.z};
     SetShaderValue(group->shader, light->position_location, position,
                    SHADER_UNIFORM_VEC3);
 
@@ -93,6 +109,7 @@ int light_source_update(LightingGroupHandle group_handle,
 }
 
 void lighting_scene_init(void) {
+    unlit_shader = LoadShader(0, 0);
     lighting_scene =
         (LightingScene){.groups = malloc(STARTING_SIZE * sizeof(LightingGroup)),
                         .groups_allocated = STARTING_SIZE};
@@ -121,8 +138,8 @@ void lighting_group_add_entity(LightingGroupHandle group_handle,
         return;
 
     entity->entity.lighting_group_handle = group_handle;
-    Model *model = modelvec_get(&scene.models, entity->model_id);
-    model->materials[0].shader = group->shader;
+    ModelData *model_data = modelvec_get(&scene.models, entity->model_handle);
+    model_data->model.materials[0].shader = group->shader;
 }
 
 int lighting_group_add_light(LightingGroupHandle group_handle,
@@ -140,6 +157,8 @@ int lighting_group_add_light(LightingGroupHandle group_handle,
         GetShaderLocation(group->shader, TextFormat("lights[%i].enabled", i));
     light.intensity_location =
         GetShaderLocation(group->shader, TextFormat("lights[%i].intensity", i));
+    light.intensity_cap_location = GetShaderLocation(
+        group->shader, TextFormat("lights[%i].intensity_cap", i));
     light.type_location =
         GetShaderLocation(group->shader, TextFormat("lights[%i].type", i));
     light.position_location =

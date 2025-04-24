@@ -8,6 +8,6 @@
 
 // Gets a list of .obj files as asset names (without .obj extension) from a
 // directory. Non-recursive.
-StringVector assets_get_list(const char *directory);
+StringVector assets_get_all(void);
 
 #endif

@@ -10,7 +10,7 @@
 TransformOperation transform_operation = {0};
 
 // Commits the transform operation to the entity transform.
-static void transform_operation_apply(LiveEntity *live_entity) {
+static void transform_apply(LiveEntity *live_entity) {
     assert(live_entity);
 
     live_entity->entity.transform =
@@ -55,7 +55,7 @@ void transform_start(TransformMode mode, Axis axis, LiveEntity *live_entity) {
 
     // Apply previous if needed
     if (transform_operation.mode != TRANSFORM_NONE) {
-        transform_operation_apply(live_entity);
+        transform_apply(live_entity);
     }
 
     transform_operation.mode = mode;
@@ -69,7 +69,7 @@ void transform_stop(LiveEntity *live_entity) {
     if (transform_operation.mode == TRANSFORM_NONE)
         return;
 
-    transform_operation_apply(live_entity);
+    transform_apply(live_entity);
     transform_operation.mode = TRANSFORM_NONE;
 }
 

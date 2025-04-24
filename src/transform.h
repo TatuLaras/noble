@@ -5,7 +5,7 @@
 
 #include "scene.h"
 
-#define ROTATION_SNAP_INCREMENT (PI / 8)
+#define ROTATION_SNAP_INCREMENT (PI / 8.0)
 
 typedef enum {
     TRANSFORM_NONE,

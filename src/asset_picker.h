@@ -22,10 +22,10 @@ extern AssetPickerState asset_picker;
 
 // Start a new search.
 void asset_picker_start_search(void);
-// Stop the current search.
-void asset_picker_stop_search(void);
 // Input a new key to the search, can be a normal letter in which case it gets
 // appended to the search query, or it can be a special hotkey.
 void asset_picker_input_key(KeyboardKey key, int ctrl_down);
+// Stops the search and sets the currently selected option as the current asset.
+void asset_picker_select_current_option(void);
 
 #endif

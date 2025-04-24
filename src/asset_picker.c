@@ -1,5 +1,7 @@
 #include "asset_picker.h"
+
 #include "common.h"
+#include "settings.h"
 #include "string_vector.h"
 #include <raylib.h>
 #include <stdio.h>
@@ -63,15 +65,26 @@ static void asset_picker_previous_match(void) {
         asset_picker.selected_match--;
 }
 
+static void stop_search(void) {
+    asset_picker.search_query_used = 0;
+    asset_picker.picking_asset = 0;
+}
+
 void asset_picker_start_search(void) {
     asset_picker.search_query_used = 0;
     asset_picker.picking_asset = 1;
     update_matches();
 }
 
-void asset_picker_stop_search(void) {
-    asset_picker.search_query_used = 0;
-    asset_picker.picking_asset = 0;
+void asset_picker_select_current_option(void) {
+    char *asset_identifier =
+        stringvec_get(&asset_picker.matches, asset_picker.selected_match);
+    if (!asset_identifier)
+        return;
+
+    strncpy(settings.selected_asset, asset_identifier,
+            ARRAY_LENGTH(settings.selected_asset) - 1);
+    stop_search();
 }
 
 void asset_picker_input_key(KeyboardKey key, int ctrl_down) {
@@ -96,6 +109,6 @@ void asset_picker_input_key(KeyboardKey key, int ctrl_down) {
         erase_character();
 
     if (key == KEY_ESCAPE || key == KEY_CAPS_LOCK) {
-        asset_picker_stop_search();
+        stop_search();
     }
 }

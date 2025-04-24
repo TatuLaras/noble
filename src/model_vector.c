@@ -8,24 +8,25 @@
 
 ModelVector modelvec_init(void) {
     ModelVector vec = {
-        .data = malloc(STARTING_SIZE * sizeof(Model)),
+        .data = malloc(STARTING_SIZE * sizeof(ModelData)),
         .data_allocated = STARTING_SIZE,
     };
     return vec;
 }
 
-void modelvec_append(ModelVector *vec, Model model) {
+ModelHandle modelvec_append(ModelVector *vec, ModelData model) {
     if (vec->data_used >= vec->data_allocated) {
         // Grow buffer
         vec->data_allocated *= GROWTH_FACTOR;
-        vec->data = realloc(vec->data, vec->data_allocated * sizeof(Model));
+        vec->data = realloc(vec->data, vec->data_allocated * sizeof(ModelData));
         assert(vec->data);
     }
 
     vec->data[vec->data_used++] = model;
+    return vec->data_used - 1;
 }
 
-Model *modelvec_get(ModelVector *vec, size_t index) {
+ModelData *modelvec_get(ModelVector *vec, size_t index) {
     if (index >= vec->data_used)
         return 0;
 

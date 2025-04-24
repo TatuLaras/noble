@@ -7,7 +7,7 @@
 #include <stddef.h>
 
 typedef struct {
-    int selected;
+    int is_entity_selected;
     EntityHandle handle;
 } EntitySelection;
 

@@ -8,6 +8,11 @@ ShortcutBuffer shortcut_buffer = {0};
 
 static Shortcut shortcuts[] = {
     {
+        .action = ACTION_TOGGLE_FPS_CONTROLS,
+        .keypresses = {KEY_F},
+        .require_shift_down = 1,
+    },
+    {
         .action = ACTION_TOGGLE_GRID,
         .keypresses = {KEY_P},
     },
@@ -32,6 +37,11 @@ static Shortcut shortcuts[] = {
         .keypresses = {KEY_S},
     },
     {
+        .action = ACTION_TOGGLE_SELECTED_ENTITY_LIGHTING,
+        .keypresses = {KEY_S},
+        .require_shift_down = 1,
+    },
+    {
         .action = ACTION_GRID_RESET,
         .keypresses = {KEY_C},
         .require_shift_down = 1,
@@ -46,7 +56,7 @@ static Shortcut shortcuts[] = {
     },
     {
         .action = ACTION_START_PICKING_ASSET,
-        .keypresses = {KEY_F},
+        .keypresses = {KEY_SPACE},
     },
     {
         .action = ACTION_OBJECT_START_TRANSLATE_X,

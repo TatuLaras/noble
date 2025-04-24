@@ -1,6 +1,6 @@
 #include "assets.h"
 
-#include "common.h"
+#include "settings.h"
 #include "string_vector.h"
 #include <assert.h>
 #include <dirent.h>
@@ -23,12 +23,14 @@ static inline int is_obj(char *filename) {
     return holds_true;
 }
 
-StringVector assets_get_list(const char *directory) {
+StringVector assets_get_all(void) {
     StringVector vec = stringvec_init();
+    if (*settings.asset_directory == 0)
+        return vec;
 
     DIR *d;
     struct dirent *dir;
-    d = opendir(directory);
+    d = opendir(settings.asset_directory);
     if (d) {
         while ((dir = readdir(d)) != NULL) {
             if (dir->d_type == DT_REG && is_obj(dir->d_name))

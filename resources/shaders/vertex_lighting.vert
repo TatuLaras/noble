@@ -11,7 +11,6 @@ uniform mat4 matModel;
 uniform mat4 matNormal;
 
 #define MAX_LIGHTS 16
-#define MAX_INTENSITY 3.0
 
 #define LIGHT_NULL 0
 #define LIGHT_DIRECTIONAL 1
@@ -21,6 +20,7 @@ struct LightSource {
     int enabled;
     int type;
     float intensity;
+    float intensity_cap;
     vec3 position;
     vec3 target;
     vec4 color;
@@ -53,7 +53,7 @@ void main()
         float lightIntensity = max(dot(lightDirection, transformedVertexNormal), 0.0);
         float r = distance(transformedVertexPosition, lights[i].position);
         lightIntensity *= lights[i].intensity / pow(r, 2);
-        lightIntensity = min(lightIntensity, MAX_INTENSITY);
+        lightIntensity = min(lightIntensity, lights[i].intensity_cap);
 
         light += vec3(lights[i].color) * lightIntensity;
     }

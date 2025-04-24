@@ -21,6 +21,7 @@ typedef enum {
 typedef struct {
     int disabled;
     float intensity;
+    float intensity_cap;
     LightType type;
     Vector3 position;
     Vector3 target;
@@ -28,6 +29,7 @@ typedef struct {
 
     uint32_t enabled_location;
     uint32_t intensity_location;
+    uint32_t intensity_cap_location;
     uint32_t type_location;
     uint32_t position_location;
     uint32_t target_location;
@@ -55,6 +57,7 @@ typedef struct {
 } LightingScene;
 
 extern LightingScene lighting_scene;
+extern Shader unlit_shader;
 
 void lighting_scene_init(void);
 void lighting_scene_free(void);
@@ -82,5 +85,8 @@ void lighting_group_set_enabled(LightingGroupHandle handle, uint32_t enabled);
 // on out-of-bound `handle` s.
 int light_source_update(LightingGroupHandle group_handle,
                         LightSourceHandle light_handle);
+
+// Get lighting group by handle.
+LightingGroup *lighting_scene_get_group(LightingGroupHandle handle);
 
 #endif

@@ -2,6 +2,7 @@
 
 #include "common.h"
 #include "raycast.h"
+#include "selection.h"
 #include "settings.h"
 
 EntityAddingState entity_adding_state = {0};
@@ -42,4 +43,5 @@ void adding_stop(void) {
     if (entity)
         entity->entity.ignore_raycast = 0;
     entity_adding_state.adding = 0;
+    selection_select_entity(entity_adding_state.entity_handle);
 }
