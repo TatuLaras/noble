@@ -31,19 +31,19 @@ Matrix raycast_get_desired_model_transform(Ray ray) {
 ObjectRaycastResult raycast_scene_objects(Ray ray) {
     ObjectRaycastResult result = {0};
     RayCollision collision = {0};
-    LiveEntity *live_entity = {0};
+    Entity *entity = {0};
     size_t i = 0;
-    while ((live_entity = scene_get_entity(i++))) {
-        if (live_entity->is_destroyed)
+    while ((entity = scene_get_entity(i++))) {
+        if (entity->is_destroyed)
             continue;
 
         ModelData *model_data =
-            modelvec_get(&scene.models, live_entity->model_handle);
+            modelvec_get(&scene.models, entity->model_handle);
 
         collision = GetRayCollisionMesh(ray, model_data->model.meshes[0],
-                                        live_entity->entity.transform);
+                                        entity->transform);
 
-        if (collision.hit && !live_entity->entity.ignore_raycast) {
+        if (collision.hit && !entity->ignore_raycast) {
             int is_closer_than_previous =
                 !result.hit_something ||
                 (Vector3DistanceSqr(ray.position, collision.point) <

@@ -6,9 +6,9 @@
 #include "settings.h"
 #include "transform.h"
 #include "ui.h"
+#include <assert.h>
 #include <raylib.h>
 #include <raymath.h>
-#include <stdio.h>
 
 LightingEditState lighting_edit_state = {0};
 
@@ -25,9 +25,9 @@ int lighting_edit_add_light(Ray ray) {
     LightSource light = {
         .type = LIGHT_POINT,
         .position = raycast_ground_intersection(ray),
-        .color = WHITE,
-        .intensity = 4.0,
-        .intensity_cap = 3.0,
+        .color = (Color){0xff, 0xcc, 0x99, 0xff},
+        .intensity = 6.0,
+        .intensity_cap = 10.0,
     };
 
     light.position = vector3_quantize(light.position);
@@ -38,6 +38,20 @@ int lighting_edit_add_light(Ray ray) {
         return 0;
     }
     return 1;
+}
+
+void lighting_edit_selected_light_toggle_enabled(void) {
+    if (!lighting_edit_state.is_light_selected)
+        return;
+
+    LightSource *light =
+        lighting_group_get_light(lighting_edit_state.current_group,
+                                 lighting_edit_state.currently_selected_light);
+    assert(light);
+    light->is_disabled = !light->is_disabled;
+
+    light_source_update(lighting_edit_state.current_group,
+                        lighting_edit_state.currently_selected_light);
 }
 
 void lighting_edit_adding_light_update(float delta_y) {
@@ -155,9 +169,8 @@ void lighting_edit_render_properties_menu(void) {
     if (!light)
         return;
 
-    // Hardcoded bad stuff...
     Rectangle base = ui_properties_menu_get_rect();
-    DrawRectangle(base.x, base.height, base.width, 120 + 10 + 6 + 80,
+    DrawRectangle(base.x, base.height, base.width, 120 + 10 + 6 + 3 * 40,
                   (Color){0x75, 0x32, 0x33, 0xff});
 
     // Color picker
@@ -169,8 +182,9 @@ void lighting_edit_render_properties_menu(void) {
 
     ui_properties_menu_reserve_height(10);
 
-    slider_input("Intensity", &light->intensity, 0.1, 10);
-    slider_input("Intensity cap", &light->intensity_cap, 0.1, 10);
+    slider_input("Intensity", &light->intensity, 0.0, 30.0);
+    slider_input("Intensity granular", &light->intensity_granular, 0.0, 2.0);
+    slider_input("Intensity cap", &light->intensity_cap, 0.0, 10.0);
 
     ui_properties_menu_reserve_height(6);
 }

@@ -4,6 +4,24 @@
 #include <stddef.h>
 #include <stdio.h>
 
+typedef enum {
+    MATCH_NONE,
+    MATCH_FULL,
+    MATCH_PARTIAL,
+} ShortcutMatchType;
+
+typedef struct {
+    ShortcutAction action;
+    KeyboardKey keypresses[4];
+    int require_shift_down;
+    int require_ctrl_down;
+    int require_alt_down;
+} Shortcut;
+
+typedef struct {
+    KeyboardKey keypresses[4];
+    uint8_t keypresses_stored;
+} ShortcutBuffer;
 ShortcutBuffer shortcut_buffer = {0};
 
 static Shortcut shortcuts[] = {
@@ -12,30 +30,15 @@ static Shortcut shortcuts[] = {
         .keypresses = {KEY_F},
         .require_shift_down = 1,
     },
-    {
-        .action = ACTION_TOGGLE_GRID,
-        .keypresses = {KEY_P},
-    },
-    {
-        .action = ACTION_TOGGLE_GIZMOS,
-        .keypresses = {KEY_O},
-    },
-    {
-        .action = ACTION_TOGGLE_QUANTIZE,
-        .keypresses = {KEY_Q},
-    },
+    {.action = ACTION_TOGGLE_GRID, .keypresses = {KEY_P}},
+    {.action = ACTION_TOGGLE_GIZMOS, .keypresses = {KEY_O}},
+    {.action = ACTION_TOGGLE_QUANTIZE, .keypresses = {KEY_Q}},
     {
         .action = ACTION_TOGGLE_ADDING_RAYCAST_INCLUDE_OBJECTS,
         .keypresses = {KEY_I},
     },
-    {
-        .action = ACTION_TOGGLE_LIGHTING_EDIT_MODE,
-        .keypresses = {KEY_L},
-    },
-    {
-        .action = ACTION_TOGGLE_LIGHTING,
-        .keypresses = {KEY_S},
-    },
+    {.action = ACTION_TOGGLE_LIGHTING_EDIT_MODE, .keypresses = {KEY_S}},
+    {.action = ACTION_TOGGLE_LIGHTING, .keypresses = {KEY_L}},
     {
         .action = ACTION_TOGGLE_SELECTED_ENTITY_LIGHTING,
         .keypresses = {KEY_S},
@@ -46,55 +49,39 @@ static Shortcut shortcuts[] = {
         .keypresses = {KEY_C},
         .require_shift_down = 1,
     },
+    {.action = ACTION_OBJECT_DELETE, .keypresses = {KEY_D}},
+    {.action = ACTION_OBJECT_DELETE, .keypresses = {KEY_DELETE}},
+    {.action = ACTION_OBJECT_DELETE, .keypresses = {KEY_BACKSPACE}},
+    {.action = ACTION_START_PICKING_ASSET, .keypresses = {KEY_SPACE}},
+    {.action = ACTION_OBJECT_START_TRANSLATE_X, .keypresses = {KEY_G, KEY_X}},
+    {.action = ACTION_OBJECT_START_TRANSLATE_Y, .keypresses = {KEY_G, KEY_Y}},
+    {.action = ACTION_OBJECT_START_TRANSLATE_Z, .keypresses = {KEY_G, KEY_Z}},
+    {.action = ACTION_OBJECT_START_ROTATE_X, .keypresses = {KEY_R, KEY_X}},
+    {.action = ACTION_OBJECT_START_ROTATE_Y, .keypresses = {KEY_R, KEY_Y}},
+    {.action = ACTION_OBJECT_START_ROTATE_Z, .keypresses = {KEY_R, KEY_Z}},
+    {.action = ACTION_CHANGE_AXIS_X, .keypresses = {KEY_X}},
+    {.action = ACTION_CHANGE_AXIS_Y, .keypresses = {KEY_Y}},
+    {.action = ACTION_CHANGE_AXIS_Z, .keypresses = {KEY_Z}},
+    {.action = ACTION_ASSET_SLOT_1, .keypresses = {KEY_ONE}},
+    {.action = ACTION_ASSET_SLOT_2, .keypresses = {KEY_TWO}},
+    {.action = ACTION_ASSET_SLOT_3, .keypresses = {KEY_THREE}},
+    {.action = ACTION_ASSET_SLOT_4, .keypresses = {KEY_FOUR}},
+    {.action = ACTION_ASSET_SLOT_5, .keypresses = {KEY_FIVE}},
+    {.action = ACTION_ASSET_SLOT_6, .keypresses = {KEY_SIX}},
+    {.action = ACTION_ASSET_SLOT_7, .keypresses = {KEY_SEVEN}},
+    {.action = ACTION_ASSET_SLOT_8, .keypresses = {KEY_EIGHT}},
+    {.action = ACTION_ASSET_SLOT_9, .keypresses = {KEY_NINE}},
+    {.action = ACTION_ASSET_SLOT_10, .keypresses = {KEY_ZERO}},
     {
-        .action = ACTION_OBJECT_DELETE,
-        .keypresses = {KEY_DELETE},
+        .action = ACTION_PICK_ASSET_FROM_SELECTED_ENTITY,
+        .keypresses = {KEY_Q},
+        .require_ctrl_down = 1,
     },
     {
-        .action = ACTION_OBJECT_DELETE,
-        .keypresses = {KEY_BACKSPACE},
+        .action = ACTION_SAVE_SCENE,
+        .keypresses = {KEY_S},
+        .require_ctrl_down = 1,
     },
-    {
-        .action = ACTION_START_PICKING_ASSET,
-        .keypresses = {KEY_SPACE},
-    },
-    {
-        .action = ACTION_OBJECT_START_TRANSLATE_X,
-        .keypresses = {KEY_G, KEY_X},
-    },
-    {
-        .action = ACTION_OBJECT_START_TRANSLATE_Y,
-        .keypresses = {KEY_G, KEY_Y},
-    },
-    {
-        .action = ACTION_OBJECT_START_TRANSLATE_Z,
-        .keypresses = {KEY_G, KEY_Z},
-    },
-    {
-        .action = ACTION_OBJECT_START_ROTATE_X,
-        .keypresses = {KEY_R, KEY_X},
-    },
-    {
-        .action = ACTION_OBJECT_START_ROTATE_Y,
-        .keypresses = {KEY_R, KEY_Y},
-    },
-    {
-        .action = ACTION_OBJECT_START_ROTATE_Z,
-        .keypresses = {KEY_R, KEY_Z},
-    },
-    {
-        .action = ACTION_CHANGE_AXIS_X,
-        .keypresses = {KEY_X},
-    },
-    {
-        .action = ACTION_CHANGE_AXIS_Y,
-        .keypresses = {KEY_Y},
-    },
-    {
-        .action = ACTION_CHANGE_AXIS_Z,
-        .keypresses = {KEY_Z},
-    },
-
 };
 
 // Resets the list of keypresses.
@@ -150,8 +137,8 @@ static void append_key(KeyboardKey key) {
     shortcut_buffer.keypresses[shortcut_buffer.keypresses_stored++] = key;
 }
 
-ShortcutAction shortcutbuf_get_action(KeyboardKey key, int shift_down,
-                                      int ctrl_down, int alt_down) {
+ShortcutAction shortcuts_get_action(KeyboardKey key, int shift_down,
+                                    int ctrl_down, int alt_down) {
     if (key == KEY_NULL)
         return ACTION_NONE;
 
@@ -170,7 +157,9 @@ ShortcutAction shortcutbuf_get_action(KeyboardKey key, int shift_down,
 
     flush_keypress_buffer();
 
-    // return ACTION_NONE;
-
     return active_shortcut.action;
+}
+
+int shortcuts_waiting_for_keypress(void) {
+    return shortcut_buffer.keypresses_stored > 0;
 }

@@ -1,3 +1,1 @@
-- Disable shading for object
-- Change light color and intensity
 - Directional light

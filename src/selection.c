@@ -14,7 +14,7 @@ void selection_deselect_all(void) {
     entity_selection_state.is_entity_selected = 0;
 }
 
-LiveEntity *selection_get_selected_entity(void) {
+Entity *selection_get_selected_entity(void) {
     if (!entity_selection_state.is_entity_selected)
         return 0;
     return scene_get_entity(entity_selection_state.handle);

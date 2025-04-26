@@ -25,5 +25,10 @@ size_t stringvec_count(StringVector *vec);
 void stringvec_as_newline_separated(StringVector *vec, char *out_buffer,
                                     size_t out_buffer_size,
                                     int max_string_count);
+// Returns 1 if StringVector `vec` has a string exactly equal to `string`.
+int stringvec_has(StringVector *vec, const char *string);
+// Truncates all data without deallocating, i.e. still has the same amount of
+// space allocated but the vector will be empty.
+void stringvec_truncate(StringVector *vec);
 
 #endif

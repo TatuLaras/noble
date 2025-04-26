@@ -1,8 +1,10 @@
 #ifndef _SETTINGS
 #define _SETTINGS
 
+#include "handles.h"
 #include "scene.h"
 
+#define SETTINGS_ASSET_SLOTS_AVAILABLE 10
 typedef struct {
     int quantize_to_grid_enabled;
     float grid_density;
@@ -14,7 +16,9 @@ typedef struct {
     int lighting_edit_mode_enabled;
     float gizmo_size;
     char asset_directory[MAX_PATH_LENGTH];
-    char selected_asset[200];
+    char *scene_filepath;
+    AssetHandle selected_asset[SETTINGS_ASSET_SLOTS_AVAILABLE];
+    uint8_t current_asset_slot;
 } Settings;
 
 extern Settings settings;

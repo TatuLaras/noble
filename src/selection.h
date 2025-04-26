@@ -15,6 +15,6 @@ extern EntitySelection entity_selection_state;
 
 void selection_select_entity(EntityHandle handle);
 void selection_deselect_all(void);
-LiveEntity *selection_get_selected_entity(void);
+Entity *selection_get_selected_entity(void);
 
 #endif

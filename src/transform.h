@@ -4,7 +4,7 @@
 // Provides functions for providing entity transform controls to the user.
 
 #include "scene.h"
-
+#include <raylib.h>
 #define ROTATION_SNAP_INCREMENT (PI / 8.0)
 
 typedef enum {
@@ -27,10 +27,10 @@ extern TransformOperation transform_operation;
 Matrix transform_get_matrix(void);
 
 // Starts the transforming process for an entity.
-void transform_start(TransformMode mode, Axis axis, LiveEntity *live_entity);
+void transform_start(TransformMode mode, Axis axis, Entity *entity);
 // Stops the transforming process while committing new transform into the
 // entitys transform.
-void transform_stop(LiveEntity *live_entity);
+void transform_stop(Entity *entity);
 
 // Stops the transforming process without committing to the entity transform.
 void transform_cancel(void);

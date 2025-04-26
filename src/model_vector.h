@@ -1,10 +1,9 @@
 #ifndef _MODEL_VECTOR
 #define _MODEL_VECTOR
 
+#include "handles.h"
 #include <raylib.h>
 #include <stddef.h>
-
-typedef size_t ModelHandle;
 
 typedef struct {
     Model model;

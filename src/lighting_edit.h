@@ -3,7 +3,6 @@
 
 // Functions for editing the lighting of a scene.
 
-#include "lighting.h"
 #include "transform.h"
 #include <raylib.h>
 
@@ -25,6 +24,8 @@ inline void lighting_edit_set_group(LightingGroupHandle handle) {
 
 // Adds a light source to the scene.
 int lighting_edit_add_light(Ray ray);
+// Toggles the enabled status of the selected light source.
+void lighting_edit_selected_light_toggle_enabled(void);
 // Updates the y position of the currently added light (mouse button held down).
 void lighting_edit_adding_light_update(float delta_y);
 // Stops the light adding process.

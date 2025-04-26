@@ -10,10 +10,10 @@
 #include "model_vector.h"
 #include "raymath.h"
 #include "scene.h"
+#include "scene_file.h"
 #include "selection.h"
 #include "settings.h"
 #include "shortcuts.h"
-#include "string_vector.h"
 #include "transform.h"
 #include "ui.h"
 #include <assert.h>
@@ -30,11 +30,6 @@ static LightingGroupHandle lighting_group_handle;
 
 static Camera3D camera = {0};
 
-static inline void refresh_asset_list(void) {
-    stringvec_free(&asset_picker.candidates);
-    asset_picker.candidates = assets_get_all();
-}
-
 static void render(void) {
     BeginDrawing();
 
@@ -43,24 +38,22 @@ static void render(void) {
     if (settings.lighting_edit_mode_enabled)
         ClearBackground(BLACK);
 
-    // Have gray background if waiting for another keystroke for a multi-key
-    // shortcut
-    if (shortcut_buffer.keypresses_stored > 0)
+    if (shortcuts_waiting_for_keypress())
         ClearBackground((Color){.r = 0x5d, .g = 0x52, .b = 0x52});
 
     BeginMode3D(camera);
 
     size_t i = 0;
-    LiveEntity *live_entity = {0};
+    Entity *entity = {0};
 
-    while ((live_entity = scene_get_entity(i++))) {
-        if (live_entity->is_destroyed)
+    while ((entity = scene_get_entity(i++))) {
+        if (entity->is_destroyed)
             continue;
 
         ModelData *model_data =
-            modelvec_get(&scene.models, live_entity->model_handle);
+            modelvec_get(&scene.models, entity->model_handle);
 
-        Matrix transform = live_entity->entity.transform;
+        Matrix transform = entity->transform;
 
         int is_selected = (entity_selection_state.is_entity_selected &&
                            entity_selection_state.handle == i - 1);
@@ -70,14 +63,11 @@ static void render(void) {
 
         if (is_current_entity_being_transformed) {
             Matrix preview_transform = transform_get_matrix();
-            transform = MatrixMultiply(preview_transform,
-                                       live_entity->entity.transform);
+            transform = MatrixMultiply(preview_transform, entity->transform);
         }
 
-        BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
         DrawMesh(model_data->model.meshes[0], model_data->model.materials[0],
                  transform);
-        EndBlendMode();
 
         int is_being_added = entity_adding_state.adding &&
                              entity_adding_state.entity_handle == i - 1;
@@ -102,7 +92,7 @@ static void render(void) {
     DrawRectangleLines(properties.x, properties.y, properties.width,
                        properties.height, (Color){0xda, 0x57, 0x57, 0xff});
 
-    ui_render(GetScreenWidth(), GetScreenHeight(), &asset_picker);
+    ui_render(GetScreenWidth(), GetScreenHeight());
 
     EndDrawing();
 }
@@ -134,6 +124,7 @@ static inline void handle_inputs(void) {
         // Select asset
         if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
             asset_picker_select_current_option();
+            entity_adding_state.rotation_angle_y = 0;
             return;
         }
 
@@ -177,7 +168,7 @@ static inline void handle_inputs(void) {
     }
 
     // Shortcuts
-    ShortcutAction action = shortcutbuf_get_action(
+    ShortcutAction action = shortcuts_get_action(
         GetKeyPressed(), IsKeyDown(KEY_LEFT_SHIFT), IsKeyDown(KEY_LEFT_CONTROL),
         IsKeyDown(KEY_LEFT_ALT));
     editor_execute_action(action);
@@ -252,15 +243,23 @@ static inline void handle_inputs(void) {
     }
 }
 
-void game_init(void) {
+int game_init(char *scene_filepath) {
+    settings.scene_filepath = scene_filepath;
+    FILE *fp = fopen(scene_filepath, "r");
+    if (scene_file_load(fp)) {
+        fclose(fp);
+        return 1;
+    }
+    fclose(fp);
+
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(800, 450, "Noble");
     SetTargetFPS(60);
 
     ui_init();
-    refresh_asset_list();
+    assets_fetch_all();
 
-    scene_init("/home/tatu/_repos/ebb/assets/");
+    scene_init();
     lighting_scene_init();
 
     lighting_group_handle =
@@ -273,6 +272,8 @@ void game_init(void) {
     camera.target = (Vector3){0.0f, 0.0f, 0.0f};
     camera.up = (Vector3){0.0f, 1.0f, 0.0f};
     camera.fovy = 45.0f;
+
+    return 0;
 }
 
 void game_main(void) {

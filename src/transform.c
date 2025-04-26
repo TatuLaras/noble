@@ -1,7 +1,6 @@
 #include "transform.h"
 
 #include "common.h"
-#include "scene.h"
 #include <assert.h>
 #include <raymath.h>
 
@@ -10,11 +9,11 @@
 TransformOperation transform_operation = {0};
 
 // Commits the transform operation to the entity transform.
-static void transform_apply(LiveEntity *live_entity) {
-    assert(live_entity);
+static void transform_apply(Entity *entity) {
+    assert(entity);
 
-    live_entity->entity.transform =
-        MatrixMultiply(transform_get_matrix(), live_entity->entity.transform);
+    entity->transform =
+        MatrixMultiply(transform_get_matrix(), entity->transform);
 }
 
 Matrix transform_get_matrix(void) {
@@ -50,12 +49,12 @@ Matrix transform_get_matrix(void) {
     return MatrixIdentity();
 }
 
-void transform_start(TransformMode mode, Axis axis, LiveEntity *live_entity) {
-    assert(live_entity);
+void transform_start(TransformMode mode, Axis axis, Entity *entity) {
+    assert(entity);
 
     // Apply previous if needed
     if (transform_operation.mode != TRANSFORM_NONE) {
-        transform_apply(live_entity);
+        transform_apply(entity);
     }
 
     transform_operation.mode = mode;
@@ -63,13 +62,13 @@ void transform_start(TransformMode mode, Axis axis, LiveEntity *live_entity) {
     transform_operation.amount = 0;
 }
 
-void transform_stop(LiveEntity *live_entity) {
-    assert(live_entity);
+void transform_stop(Entity *entity) {
+    assert(entity);
 
     if (transform_operation.mode == TRANSFORM_NONE)
         return;
 
-    transform_apply(live_entity);
+    transform_apply(entity);
     transform_operation.mode = TRANSFORM_NONE;
 }
 

@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-void game_init(void);
+int game_init(char *scene_filepath);
 void game_main(void);
 void game_deinit(void);
 

@@ -7,6 +7,7 @@
 #include "model_vector.h"
 #include "raycast.h"
 #include "scene.h"
+#include "scene_file.h"
 #include "selection.h"
 #include "settings.h"
 #include "transform.h"
@@ -30,7 +31,7 @@ static inline void start_transform(TransformMode mode, Axis axis) {
         return;
     }
 
-    LiveEntity *selected_entity = selection_get_selected_entity();
+    Entity *selected_entity = selection_get_selected_entity();
     if (!selected_entity)
         return;
 
@@ -39,7 +40,7 @@ static inline void start_transform(TransformMode mode, Axis axis) {
 }
 
 static inline void toggle_selected_entity_lighting(void) {
-    LiveEntity *selected_entity = selection_get_selected_entity();
+    Entity *selected_entity = selection_get_selected_entity();
     if (!selected_entity)
         return;
 
@@ -55,14 +56,33 @@ static inline void toggle_selected_entity_lighting(void) {
     model_data = modelvec_get(&scene.models, selected_entity->model_handle);
     assert(model_data);
 
-    selected_entity->entity.is_unlit = !selected_entity->entity.is_unlit;
-    if (selected_entity->entity.is_unlit) {
+    selected_entity->is_unlit = !selected_entity->is_unlit;
+    if (selected_entity->is_unlit) {
         model_data->model.materials[0].shader = unlit_shader;
     } else {
-        LightingGroup *group = lighting_scene_get_group(
-            selected_entity->entity.lighting_group_handle);
+        LightingGroup *group =
+            lighting_scene_get_group(selected_entity->lighting_group_handle);
         assert(group);
         model_data->model.materials[0].shader = group->shader;
+    }
+}
+
+static inline void pick_selected_entity_asset(void) {
+    if (!entity_selection_state.is_entity_selected)
+        return;
+
+    Entity *entity = scene_get_entity(entity_selection_state.handle);
+    assert(entity);
+    settings.selected_asset[settings.current_asset_slot] = entity->asset_handle;
+}
+
+// In light edit mode this toggles the enabled status of the light.
+static inline void delete_selected_object(void) {
+    if (settings.lighting_edit_mode_enabled) {
+        lighting_edit_selected_light_toggle_enabled();
+    } else if (entity_selection_state.is_entity_selected) {
+        scene_remove(entity_selection_state.handle);
+        selection_deselect_all();
     }
 }
 
@@ -73,7 +93,7 @@ void editor_stop_transform(void) {
         return;
     }
 
-    LiveEntity *selected_entity = selection_get_selected_entity();
+    Entity *selected_entity = selection_get_selected_entity();
     if (selected_entity)
         transform_stop(selected_entity);
     EnableCursor();
@@ -121,15 +141,9 @@ void editor_execute_action(ShortcutAction action) {
         toggle_selected_entity_lighting();
         break;
 
-    case ACTION_OBJECT_DELETE: {
-        if (entity_adding_state.adding) {
-            scene_remove(entity_adding_state.entity_handle);
-            entity_adding_state.adding = 0;
-        } else if (entity_selection_state.is_entity_selected) {
-            scene_remove(entity_selection_state.handle);
-            selection_deselect_all();
-        }
-    } break;
+    case ACTION_OBJECT_DELETE:
+        delete_selected_object();
+        break;
 
     case ACTION_START_PICKING_ASSET:
         asset_picker_start_search();
@@ -170,6 +184,47 @@ void editor_execute_action(ShortcutAction action) {
             start_transform(transform_operation.mode, AXIS_Z);
         break;
 
+    case ACTION_ASSET_SLOT_1:
+        settings.current_asset_slot = 0;
+        break;
+    case ACTION_ASSET_SLOT_2:
+        settings.current_asset_slot = 1;
+        break;
+    case ACTION_ASSET_SLOT_3:
+        settings.current_asset_slot = 2;
+        break;
+    case ACTION_ASSET_SLOT_4:
+        settings.current_asset_slot = 3;
+        break;
+    case ACTION_ASSET_SLOT_5:
+        settings.current_asset_slot = 4;
+        break;
+    case ACTION_ASSET_SLOT_6:
+        settings.current_asset_slot = 5;
+        break;
+    case ACTION_ASSET_SLOT_7:
+        settings.current_asset_slot = 6;
+        break;
+    case ACTION_ASSET_SLOT_8:
+        settings.current_asset_slot = 7;
+        break;
+    case ACTION_ASSET_SLOT_9:
+        settings.current_asset_slot = 8;
+        break;
+    case ACTION_ASSET_SLOT_10:
+        settings.current_asset_slot = 9;
+        break;
+
+    case ACTION_PICK_ASSET_FROM_SELECTED_ENTITY:
+        pick_selected_entity_asset();
+        break;
+
+    case ACTION_SAVE_SCENE: {
+        FILE *fp = fopen(settings.scene_filepath, "w");
+        scene_file_store(fp);
+        fclose(fp);
+    } break;
+
     case ACTION_NONE:
         break;
     case ACTION_TOGGLE_TILE_MODE:
@@ -190,7 +245,7 @@ void editor_instantiate_object(Ray ray, LightingGroupHandle handle) {
     if (adding_asset_instantiate(ray))
         return;
 
-    LiveEntity *entity = scene_get_entity(entity_adding_state.entity_handle);
+    Entity *entity = scene_get_entity(entity_adding_state.entity_handle);
     lighting_group_add_entity(handle, entity);
 }
 

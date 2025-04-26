@@ -94,6 +94,7 @@ void gizmos_render_light_gizmos(LightingGroupHandle handle, Camera3D camera) {
         int is_selected = lighting_edit_state.is_light_selected &&
                           lighting_edit_state.currently_selected_light == i - 1;
 
+        // Light transform gizmo
         if (is_selected && transform_operation.mode == TRANSFORM_TRANSLATE) {
             BeginMode3D(camera);
             switch (transform_operation.axis) {
@@ -130,6 +131,13 @@ void gizmos_render_light_gizmos(LightingGroupHandle handle, Camera3D camera) {
         if (lighting_edit_state.is_light_selected &&
             lighting_edit_state.currently_selected_light == i - 1)
             color = WHITE;
+
         DrawCircleLines(light_pos.x, light_pos.y, LIGHT_SELECT_RADIUS, color);
+
+        if (light->is_disabled)
+            DrawLineEx(
+                (Vector2){light_pos.x - LIGHT_SELECT_RADIUS - 4, light_pos.y},
+                (Vector2){light_pos.x + LIGHT_SELECT_RADIUS + 4, light_pos.y},
+                2, color);
     }
 }

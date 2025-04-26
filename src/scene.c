@@ -1,7 +1,9 @@
 #include "scene.h"
 
+#include "assets.h"
+#include "handles.h"
 #include "model_files.h"
-#include "model_vector.h"
+#include "settings.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,14 +14,18 @@
 
 Scene scene = {0};
 
-static inline Model
-load_model_by_asset_identifier(const char *asset_identifier) {
+// Loads a model of asset name `asset_name` from the asset directory (see
+// settings.h).
+static inline Model load_asset_model(AssetHandle handle) {
+    char *asset_name = assets_get_name(handle);
+    assert(asset_name);
+
     char filepath[MAX_PATH_LENGTH + 1] = {0};
-    assert(strlen(scene.assets_base_path) + strlen(asset_identifier) + 4 <=
+    assert(strlen(settings.asset_directory) + strlen(asset_name) + 4 <=
            MAX_PATH_LENGTH);
 
-    strcpy(filepath, scene.assets_base_path);
-    strcat(filepath, asset_identifier);
+    strcpy(filepath, settings.asset_directory);
+    strcat(filepath, asset_name);
     strcat(filepath, ".obj");
     Model model = LoadModel(filepath);
     if (!model.meshCount)
@@ -28,39 +34,38 @@ load_model_by_asset_identifier(const char *asset_identifier) {
     return model;
 }
 
-void scene_init(const char *assets_base_path) {
-    Scene new_scene = {
+void scene_init(void) {
+    scene = (Scene){
         .models = modelvec_init(),
-        .entities = malloc(ENTITIES_STARTING_SIZE * sizeof(LiveEntity)),
+        .entities = malloc(ENTITIES_STARTING_SIZE * sizeof(Entity)),
         .entities_allocated = ENTITIES_STARTING_SIZE,
     };
-    scene = new_scene;
-    strncpy(scene.assets_base_path, assets_base_path, MAX_PATH_LENGTH - 1);
 }
 
 int scene_add(Entity entity, EntityHandle *out_entity_handle) {
-    if (*entity.asset_identifier == 0)
-        return 1;
 
     if (scene.entities_used >= scene.entities_allocated) {
         // Grow buffer
         scene.entities_allocated *= ENTITIES_GROWTH_FACTOR;
-        scene.entities = realloc(scene.entities,
-                                 scene.entities_allocated * sizeof(LiveEntity));
-        assert(scene.entities);
+        scene.entities =
+            realloc(scene.entities, scene.entities_allocated * sizeof(Entity));
+        if (!scene.entities)
+            return 1;
     }
 
-    LiveEntity live_entity = {
-        .entity = entity,
-    };
+    char *asset_name = assets_get_name(entity.asset_handle);
+    assert(asset_name);
 
     // Check if model of entity already loaded, connect index
     size_t i = 0;
-    LiveEntity *scene_entity = 0;
+    Entity *scene_entity = 0;
     int match_found = 0;
     while ((scene_entity = scene_get_entity(i++))) {
-        if (!strcmp(entity.asset_identifier,
-                    scene_entity->entity.asset_identifier)) {
+        char *scene_entity_asset_name =
+            assets_get_name(scene_entity->asset_handle);
+        assert(scene_entity_asset_name);
+
+        if (!strcmp(asset_name, scene_entity_asset_name)) {
             // Needs to not be a private instance of a model
             ModelData *model_data =
                 modelvec_get(&scene.models, scene_entity->model_handle);
@@ -68,7 +73,7 @@ int scene_add(Entity entity, EntityHandle *out_entity_handle) {
             if (model_data->is_private_instance)
                 continue;
 
-            live_entity.model_handle = scene_entity->model_handle;
+            entity.model_handle = scene_entity->model_handle;
             match_found = 1;
             break;
         }
@@ -76,16 +81,14 @@ int scene_add(Entity entity, EntityHandle *out_entity_handle) {
 
     // If not, load model
     if (!match_found) {
-        ModelData model_data = {.model = load_model_by_asset_identifier(
-                                    live_entity.entity.asset_identifier)};
+        ModelData model_data = {.model = load_asset_model(entity.asset_handle)};
         if (!model_data.model.meshCount)
             return 1;
 
-        live_entity.model_handle = scene.models.data_used;
-        modelvec_append(&scene.models, model_data);
+        entity.model_handle = modelvec_append(&scene.models, model_data);
     }
 
-    scene.entities[scene.entities_used++] = live_entity;
+    scene.entities[scene.entities_used++] = entity;
 
     if (out_entity_handle)
         *out_entity_handle = scene.entities_used - 1;
@@ -98,21 +101,20 @@ void scene_remove(EntityHandle handle) {
         scene.entities[handle].is_destroyed = 1;
 }
 
-LiveEntity *scene_get_entity(EntityHandle handle) {
+Entity *scene_get_entity(EntityHandle handle) {
     if (handle >= scene.entities_used)
         return 0;
     return scene.entities + handle;
 }
 
-int scene_entity_model_unlink(LiveEntity *entity) {
+int scene_entity_model_unlink(Entity *entity) {
     assert(entity);
 
     ModelData *model_data = modelvec_get(&scene.models, entity->model_handle);
     assert(model_data);
 
     ModelData new_instance = {
-        .model =
-            load_model_by_asset_identifier(entity->entity.asset_identifier),
+        .model = load_asset_model(entity->asset_handle),
         .is_private_instance = 1,
     };
     assert(new_instance.model.meshCount);

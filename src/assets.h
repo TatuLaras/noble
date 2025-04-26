@@ -3,11 +3,15 @@
 
 // Functions for handling assets.
 
+#include "handles.h"
 #include "string_vector.h"
 #include <stddef.h>
 
-// Gets a list of .obj files as asset names (without .obj extension) from a
-// directory. Non-recursive.
-StringVector assets_get_all(void);
+extern StringVector asset_list;
+
+// Gets the list of all assets from the asset directory (see settings.h) to the
+// asset list.
+void assets_fetch_all(void);
+char *assets_get_name(AssetHandle handle);
 
 #endif

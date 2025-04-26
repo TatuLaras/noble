@@ -47,6 +47,7 @@ void main()
 
     for (int i = 0; i < MAX_LIGHTS; i++) {
         if (lights[i].type == LIGHT_NULL) break;
+        if (lights[i].enabled == 0) continue;
 
         vec3 lightDirection = normalize(lights[i].position - transformedVertexPosition);
 

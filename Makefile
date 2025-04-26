@@ -29,23 +29,23 @@ install: release
 	cp $(BUILD_DIR)/release /usr/bin/$(NAME)
 asan: $(BUILD_DIR) $(BUILD_DIR)/asan
 
-run: $(BUILD_DIR) $(BUILD_DIR)/release
-	@echo "Warning: no address sanitation enabled, consider running with 'make run_asan' when developing."
-	$(BUILD_DIR)/release $(ARGS)
+run: $(BUILD_DIR) $(BUILD_DIR)/debug
+	@echo "WARNING: no address sanitation enabled, consider running with 'make run_asan' when developing."
+	$(BUILD_DIR)/debug $(ARGS)
 
 run_asan: $(BUILD_DIR) $(BUILD_DIR)/asan
 	$(BUILD_DIR)/asan $(ARGS)
 
 $(BUILD_DIR)/debug: $(SRC)
-	@echo "Building debug build"
+	@echo "INFO: Building debug build"
 	$(CC) -o $@ $^ $(CFLAGS_DEBUG)
 
 $(BUILD_DIR)/release: $(SRC)
-	@echo "Building release build"
+	@echo "INFO: Building release build"
 	$(CC) -o $@ $^ $(CFLAGS_RELEASE)
 
 $(BUILD_DIR)/asan: $(SRC)
-	@echo "Building address sanitation build"
+	@echo "INFO: Building address sanitation build"
 	$(CC) -o $@ $^ $(CFLAGS_ASAN)
 
 

@@ -30,32 +30,26 @@ typedef enum {
     ACTION_CHANGE_AXIS_X,
     ACTION_CHANGE_AXIS_Y,
     ACTION_CHANGE_AXIS_Z,
+    ACTION_ASSET_SLOT_1,
+    ACTION_ASSET_SLOT_2,
+    ACTION_ASSET_SLOT_3,
+    ACTION_ASSET_SLOT_4,
+    ACTION_ASSET_SLOT_5,
+    ACTION_ASSET_SLOT_6,
+    ACTION_ASSET_SLOT_7,
+    ACTION_ASSET_SLOT_8,
+    ACTION_ASSET_SLOT_9,
+    ACTION_ASSET_SLOT_10,
+    ACTION_PICK_ASSET_FROM_SELECTED_ENTITY,
+    ACTION_SAVE_SCENE,
 } ShortcutAction;
-
-typedef enum {
-    MATCH_NONE,
-    MATCH_FULL,
-    MATCH_PARTIAL,
-} ShortcutMatchType;
-
-typedef struct {
-    ShortcutAction action;
-    KeyboardKey keypresses[4];
-    int require_shift_down;
-    int require_ctrl_down;
-    int require_alt_down;
-} Shortcut;
-
-typedef struct {
-    KeyboardKey keypresses[4];
-    uint8_t keypresses_stored;
-} ShortcutBuffer;
-
-extern ShortcutBuffer shortcut_buffer;
 
 // Registers the currently pressed key and if an action has taken place it
 // returns that, otherwise returns `ACTION_NONE`.
-ShortcutAction shortcutbuf_get_action(KeyboardKey key, int shift_down,
-                                      int ctrl_down, int alt_down);
+ShortcutAction shortcuts_get_action(KeyboardKey key, int shift_down,
+                                    int ctrl_down, int alt_down);
+// Returns true if we are waiting for another keypress (for example 'g' has been
+// pressed and either an axis or a cancellation is required).
+int shortcuts_waiting_for_keypress(void);
 
 #endif

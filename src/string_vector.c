@@ -119,3 +119,19 @@ StringVector stringvec_clone(StringVector *vec) {
            vec->indices_allocated * sizeof(char *));
     return new_vec;
 }
+
+void stringvec_truncate(StringVector *vec) {
+    vec->data_used = 0;
+    vec->indices_used = 0;
+}
+
+int stringvec_has(StringVector *vec, const char *string) {
+    size_t i = 0;
+    char *candidate = 0;
+    while ((candidate = stringvec_get(vec, i++))) {
+        if (!strcmp(candidate, string))
+            return 1;
+    }
+
+    return 0;
+}

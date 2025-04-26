@@ -9,9 +9,6 @@
 
 #define LIGHTING_MAX_LIGHTS_PER_GROUP 16
 
-typedef size_t LightingGroupHandle;
-typedef size_t LightSourceHandle;
-
 typedef enum {
     LIGHT_NULL,
     LIGHT_POINT,
@@ -19,15 +16,16 @@ typedef enum {
 } LightType;
 
 typedef struct {
-    int disabled;
+    int is_disabled;
     float intensity;
+    float intensity_granular;
     float intensity_cap;
     LightType type;
     Vector3 position;
     Vector3 target;
     Color color;
 
-    uint32_t enabled_location;
+    uint32_t is_enabled_location;
     uint32_t intensity_location;
     uint32_t intensity_cap_location;
     uint32_t type_location;
@@ -66,7 +64,7 @@ void lighting_scene_free(void);
 LightingGroupHandle lighting_group_create(Color ambient_color);
 // Adds a new entity to the lighting group so it will be affected by the light
 // sources in that group.
-void lighting_group_add_entity(LightingGroupHandle handle, LiveEntity *entity);
+void lighting_group_add_entity(LightingGroupHandle handle, Entity *entity);
 // Adds a new light source to the lighting group, allowing it to illuminate
 // entities in that group.
 int lighting_group_add_light(LightingGroupHandle handle, LightSource source,

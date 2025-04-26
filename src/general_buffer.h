@@ -1,6 +1,8 @@
 #ifndef _FILE_BUFFER
 #define _FILE_BUFFER
 
+// A general auto-growing buffer that just holds bytes.
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -11,7 +13,12 @@ typedef struct {
 } GeneralBuffer;
 
 GeneralBuffer genbuf_init(void);
-void genbuf_append(GeneralBuffer *buf, void *data, size_t data_size);
-void genbuf_get(GeneralBuffer *buf, void *out_data, size_t out_data_size);
+void genbuf_free(GeneralBuffer *buf);
+
+// Appends `data_size` bytes from `data` to the buffer, returns the start
+// address of that newly appended data.
+void *genbuf_append(GeneralBuffer *buf, void *data, size_t data_size);
+// Allocates `size` zero-initialized bytes.
+void *genbuf_allocate(GeneralBuffer *buf, size_t size);
 
 #endif

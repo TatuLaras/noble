@@ -1,13 +1,13 @@
 #include "ui.h"
 
 #include "asset_picker.h"
+#include "assets.h"
 #include "common.h"
 #include "settings.h"
-#include "string_vector.h"
+#include <assert.h>
 #include <raylib.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <string.h>
 
 // Ignore some warnings from external UI library
 #ifdef __GNUC__
@@ -30,11 +30,11 @@ static uint16_t properties_menu_height = 0;
 static inline void render_status_bar(Rectangle rect) {
     char status_string[256] = {0};
 
-    char *asset = "no asset";
-    if (settings.lighting_edit_mode_enabled)
-        asset = "LIGHTING EDIT";
-    else if (*settings.selected_asset)
-        asset = settings.selected_asset;
+    char *asset = "LIGHTING EDIT";
+    if (!settings.lighting_edit_mode_enabled)
+        asset = assets_get_name(
+            settings.selected_asset[settings.current_asset_slot]);
+    assert(asset);
 
     char *gizmos = "";
     if (settings.gizmos_enabled)
@@ -57,8 +57,9 @@ static inline void render_status_bar(Rectangle rect) {
         lighting = "shading";
 
     snprintf(status_string, ARRAY_LENGTH(status_string) - 1,
-             "%s  |  o [%s]  p [%s]  q [%s]  i [%s]  s [%s]", asset, gizmos,
-             grid, snap, object_ignore, lighting);
+             "%u  %s  |  o [%s]  p [%s]  q [%s]  i [%s]  s [%s]",
+             settings.current_asset_slot + 1, asset, gizmos, grid, snap,
+             object_ignore, lighting);
 
     GuiStatusBar(rect, status_string);
 }
@@ -67,29 +68,23 @@ void ui_init(void) {
     GuiLoadStyleCherry();
 }
 
-void ui_render(uint16_t screen_width, uint16_t screen_height,
-               AssetPickerState *picker) {
+void ui_render(uint16_t screen_width, uint16_t screen_height) {
     render_status_bar((Rectangle){0, screen_height - 20, screen_width, 20});
 
-    if (!picker->picking_asset)
+    if (!asset_picker.picking_asset)
         return;
 
-    char current_search_query[ARRAY_LENGTH(picker->search_query)] = {0};
-    strncpy(current_search_query, picker->search_query,
-            picker->search_query_used);
+    asset_picker.search_query[asset_picker.search_query_used] = 0;
 
     uint32_t y = 0;
-    GuiStatusBar((Rectangle){0, y, screen_width, 20}, current_search_query);
+    GuiStatusBar((Rectangle){0, y, screen_width, 20},
+                 asset_picker.search_query);
     y += 20;
-
-    static char newline_separated_matches[4096] = {0};
-    stringvec_as_newline_separated(&picker->matches, newline_separated_matches,
-                                   ARRAY_LENGTH(newline_separated_matches),
-                                   ASSET_PICKER_MATCHES_MAX_COUNT);
 
     GuiListView((Rectangle){0, y, screen_width,
                             30 * ASSET_PICKER_MATCHES_MAX_COUNT + 4},
-                newline_separated_matches, 0, (int *)&picker->selected_match);
+                asset_picker_get_newline_separated_matches(), 0,
+                (int *)&asset_picker.selected_match);
     y += 200;
 }
 

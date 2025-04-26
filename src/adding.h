@@ -3,7 +3,6 @@
 
 // Handles adding objects to the scene
 
-#include "scene.h"
 #include <raylib.h>
 #include <stddef.h>
 #include <string.h>

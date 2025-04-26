@@ -1,40 +1,38 @@
 #include "asset_picker.h"
 
+#include "assets.h"
 #include "common.h"
+#include "handles.h"
 #include "settings.h"
 #include "string_vector.h"
+#include <assert.h>
 #include <raylib.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 
 AssetPickerState asset_picker = {0};
 
+static char newline_separated_matches[4096] = {0};
+static int newline_separated_matches_valid = 0;
+
 static inline void update_matches(void) {
+    newline_separated_matches_valid = 0;
     asset_picker.selected_match = 0;
-    if (!asset_picker.candidates.data)
-        return;
+    assert(asset_list.data);
 
-    stringvec_free(&asset_picker.matches);
-
-    if (asset_picker.search_query_used == 0) {
-        asset_picker.matches = stringvec_clone(&asset_picker.candidates);
-        return;
-    }
-
-    asset_picker.matches = stringvec_init();
-
+    asset_picker.matches_used = 0;
     char *candidate = 0;
-    size_t i = 0;
-    while ((candidate = stringvec_get(&asset_picker.candidates, i++))) {
-        int is_match = !strncmp(candidate, asset_picker.search_query,
-                                asset_picker.search_query_used);
-        if (is_match) {
-            stringvec_append(&asset_picker.matches, candidate,
-                             strlen(candidate));
-            if (stringvec_count(&asset_picker.matches) >=
-                ASSET_PICKER_MATCHES_MAX_COUNT)
-                break;
-        }
+    AssetHandle i = 0;
+    while ((candidate = assets_get_name(i++)) &&
+           asset_picker.matches_used < ASSET_PICKER_MATCHES_MAX_COUNT) {
+
+        // Not a match
+        if (strncmp(candidate, asset_picker.search_query,
+                    asset_picker.search_query_used))
+            continue;
+
+        asset_picker.matches[asset_picker.matches_used++] = i - 1;
     }
 }
 
@@ -55,8 +53,7 @@ static inline void erase_character(void) {
 
 static void asset_picker_next_match(void) {
     if (asset_picker.selected_match <
-        min(ASSET_PICKER_MATCHES_MAX_COUNT,
-            stringvec_count(&asset_picker.matches) - 1))
+        min(ASSET_PICKER_MATCHES_MAX_COUNT, asset_picker.matches_used))
         asset_picker.selected_match++;
 }
 
@@ -77,13 +74,12 @@ void asset_picker_start_search(void) {
 }
 
 void asset_picker_select_current_option(void) {
-    char *asset_identifier =
-        stringvec_get(&asset_picker.matches, asset_picker.selected_match);
-    if (!asset_identifier)
-        return;
-
-    strncpy(settings.selected_asset, asset_identifier,
-            ARRAY_LENGTH(settings.selected_asset) - 1);
+    if (asset_picker.selected_match < asset_picker.matches_used) {
+        assert(
+            assets_get_name(asset_picker.matches[asset_picker.selected_match]));
+        settings.selected_asset[settings.current_asset_slot] =
+            asset_picker.matches[asset_picker.selected_match];
+    }
     stop_search();
 }
 
@@ -111,4 +107,25 @@ void asset_picker_input_key(KeyboardKey key, int ctrl_down) {
     if (key == KEY_ESCAPE || key == KEY_CAPS_LOCK) {
         stop_search();
     }
+}
+
+char *asset_picker_get_newline_separated_matches(void) {
+    if (newline_separated_matches_valid)
+        return newline_separated_matches;
+
+    printf("INFO: Recalculate newline separated string for matches\n");
+
+    size_t pos = 0;
+    for (AssetHandle i = 0; i < asset_picker.matches_used; i++) {
+        char *name = assets_get_name(asset_picker.matches[i]);
+        assert(name);
+
+        for (size_t j = 0; name[j]; j++)
+            newline_separated_matches[pos++] = name[j];
+        newline_separated_matches[pos++] = '\n';
+    }
+    newline_separated_matches[pos] = 0;
+
+    newline_separated_matches_valid = 1;
+    return newline_separated_matches;
 }

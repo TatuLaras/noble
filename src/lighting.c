@@ -72,11 +72,14 @@ int light_source_update(LightingGroupHandle group_handle,
     if (light->type == LIGHT_NULL)
         return 1;
 
-    int enabled = !light->disabled;
-    SetShaderValue(group->shader, light->enabled_location, &enabled,
+    int enabled = !light->is_disabled;
+    SetShaderValue(group->shader, light->is_enabled_location, &enabled,
                    SHADER_UNIFORM_INT);
-    SetShaderValue(group->shader, light->intensity_location, &light->intensity,
+
+    float intensity = light->intensity + light->intensity_granular;
+    SetShaderValue(group->shader, light->intensity_location, &intensity,
                    SHADER_UNIFORM_FLOAT);
+
     SetShaderValue(group->shader, light->intensity_cap_location,
                    &light->intensity_cap, SHADER_UNIFORM_FLOAT);
     SetShaderValue(group->shader, light->type_location, &light->type,
@@ -132,12 +135,12 @@ LightingGroupHandle lighting_group_create(Color ambient_color) {
 }
 
 void lighting_group_add_entity(LightingGroupHandle group_handle,
-                               LiveEntity *entity) {
+                               Entity *entity) {
     LightingGroup *group = lighting_scene_get_group(group_handle);
     if (!group)
         return;
 
-    entity->entity.lighting_group_handle = group_handle;
+    entity->lighting_group_handle = group_handle;
     ModelData *model_data = modelvec_get(&scene.models, entity->model_handle);
     model_data->model.materials[0].shader = group->shader;
 }
@@ -146,14 +149,16 @@ int lighting_group_add_light(LightingGroupHandle group_handle,
                              LightSource light,
                              LightSourceHandle *out_light_source_handle) {
     LightingGroup *group = lighting_scene_get_group(group_handle);
+    assert(group);
     if (!group || group->lights_size >= LIGHTING_MAX_LIGHTS_PER_GROUP)
         return 1;
 
     uint32_t i = group->lights_size;
 
+    // Connect shader locations
     light.color_location =
         GetShaderLocation(group->shader, TextFormat("lights[%i].color", i));
-    light.enabled_location =
+    light.is_enabled_location =
         GetShaderLocation(group->shader, TextFormat("lights[%i].enabled", i));
     light.intensity_location =
         GetShaderLocation(group->shader, TextFormat("lights[%i].intensity", i));
@@ -166,10 +171,10 @@ int lighting_group_add_light(LightingGroupHandle group_handle,
     light.target_location =
         GetShaderLocation(group->shader, TextFormat("lights[%i].target", i));
 
-    group->lights[group->lights_size++] = light;
-
     if (out_light_source_handle)
-        *out_light_source_handle = group->lights_size - 1;
+        *out_light_source_handle = group->lights_size;
+
+    group->lights[group->lights_size++] = light;
 
     update_shader_data(group_handle);
 
