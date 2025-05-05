@@ -7,7 +7,7 @@ UNITY_DIR = external/unity
 EXTERNAL_INCLUDE = external/include
 
 CC = gcc
-PACKAGES = $(shell pkg-config --libs raylib) -lm
+PACKAGES = $(shell pkg-config --libs raylib opengl) -lm
 SANITIZE = -fsanitize=address
 CFLAGS = $(PACKAGES) -I$(EXTERNAL_INCLUDE) -Wall -Wextra -Wshadow -pedantic -Wstrict-prototypes -march=native
 CFLAGS_TEST = $(PACKAGES) -DTEST -I$(UNITY_DIR) -I$(SRC_DIR) -I$(EXTERNAL_INCLUDE) -ggdb $(SANITIZE) -std=c23

@@ -13,5 +13,8 @@ extern StringVector asset_list;
 // asset list.
 void assets_fetch_all(void);
 char *assets_get_name(AssetHandle handle);
+// Gets handle of asset name `name`, returns 1 if there is no such asset.
+int assets_get_handle(const char *name, AssetHandle *out_handle);
+size_t assets_get_count(void);
 
 #endif

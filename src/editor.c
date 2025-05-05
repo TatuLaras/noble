@@ -4,7 +4,6 @@
 #include "asset_picker.h"
 #include "lighting.h"
 #include "lighting_edit.h"
-#include "model_vector.h"
 #include "raycast.h"
 #include "scene.h"
 #include "scene_file.h"
@@ -43,28 +42,7 @@ static inline void toggle_selected_entity_lighting(void) {
     Entity *selected_entity = selection_get_selected_entity();
     if (!selected_entity)
         return;
-
-    ModelData *model_data =
-        modelvec_get(&scene.models, selected_entity->model_handle);
-    assert(model_data);
-
-    if (!model_data->is_private_instance) {
-        if (scene_entity_model_unlink(selected_entity))
-            return;
-    }
-
-    model_data = modelvec_get(&scene.models, selected_entity->model_handle);
-    assert(model_data);
-
-    selected_entity->is_unlit = !selected_entity->is_unlit;
-    if (selected_entity->is_unlit) {
-        model_data->model.materials[0].shader = unlit_shader;
-    } else {
-        LightingGroup *group =
-            lighting_scene_get_group(selected_entity->lighting_group_handle);
-        assert(group);
-        model_data->model.materials[0].shader = group->shader;
-    }
+    lighting_set_entity_unlit(selected_entity, !selected_entity->is_unlit);
 }
 
 static inline void pick_selected_entity_asset(void) {
@@ -84,6 +62,11 @@ static inline void delete_selected_object(void) {
         scene_remove(entity_selection_state.handle);
         selection_deselect_all();
     }
+}
+
+static inline void set_asset_slot(uint8_t slot) {
+    settings.current_asset_slot = slot;
+    entity_adding_state.rotation_angle_y = 0;
 }
 
 void editor_stop_transform(void) {
@@ -140,13 +123,22 @@ void editor_execute_action(ShortcutAction action) {
     case ACTION_TOGGLE_SELECTED_ENTITY_LIGHTING:
         toggle_selected_entity_lighting();
         break;
+    case ACTION_TOGGLE_DEBUG_INFO:
+        settings.debug_info_enabled = !settings.debug_info_enabled;
+        break;
+    case ACTION_TOGGLE_PROPERTIES_MENU:
+        settings.properties_menu_enabled = !settings.properties_menu_enabled;
+        break;
 
     case ACTION_OBJECT_DELETE:
         delete_selected_object();
         break;
 
     case ACTION_START_PICKING_ASSET:
-        asset_picker_start_search();
+        asset_picker_start_search(PICKER_MODE_ASSET);
+        break;
+    case ACTION_START_PICKING_SKYBOX:
+        asset_picker_start_search(PICKER_MODE_SKYBOX);
         break;
 
     case ACTION_OBJECT_START_ROTATE_X:
@@ -170,6 +162,7 @@ void editor_execute_action(ShortcutAction action) {
         break;
     case ACTION_GRID_RESET:
         settings.grid_density = 1;
+        settings.grid_height = 0;
         break;
     case ACTION_CHANGE_AXIS_X:
         if (transform_operation.mode != TRANSFORM_NONE)
@@ -185,34 +178,34 @@ void editor_execute_action(ShortcutAction action) {
         break;
 
     case ACTION_ASSET_SLOT_1:
-        settings.current_asset_slot = 0;
+        set_asset_slot(0);
         break;
     case ACTION_ASSET_SLOT_2:
-        settings.current_asset_slot = 1;
+        set_asset_slot(1);
         break;
     case ACTION_ASSET_SLOT_3:
-        settings.current_asset_slot = 2;
+        set_asset_slot(2);
         break;
     case ACTION_ASSET_SLOT_4:
-        settings.current_asset_slot = 3;
+        set_asset_slot(3);
         break;
     case ACTION_ASSET_SLOT_5:
-        settings.current_asset_slot = 4;
+        set_asset_slot(4);
         break;
     case ACTION_ASSET_SLOT_6:
-        settings.current_asset_slot = 5;
+        set_asset_slot(5);
         break;
     case ACTION_ASSET_SLOT_7:
-        settings.current_asset_slot = 6;
+        set_asset_slot(6);
         break;
     case ACTION_ASSET_SLOT_8:
-        settings.current_asset_slot = 7;
+        set_asset_slot(7);
         break;
     case ACTION_ASSET_SLOT_9:
-        settings.current_asset_slot = 8;
+        set_asset_slot(8);
         break;
     case ACTION_ASSET_SLOT_10:
-        settings.current_asset_slot = 9;
+        set_asset_slot(9);
         break;
 
     case ACTION_PICK_ASSET_FROM_SELECTED_ENTITY:
@@ -282,6 +275,13 @@ void editor_adjust_grid_density(float amount) {
         settings.grid_density = MIN_GRID_DENSITY;
     if (settings.grid_density > MAX_GRID_DENSITY)
         settings.grid_density = MAX_GRID_DENSITY;
+}
+
+void editor_adjust_grid_height(float amount) {
+    if (amount > 0)
+        settings.grid_height += settings.grid_density;
+    else if (amount < 0)
+        settings.grid_height -= settings.grid_density;
 }
 
 void editor_adjust_gizmo_size(float amount) {

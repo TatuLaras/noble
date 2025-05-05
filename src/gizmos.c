@@ -1,9 +1,30 @@
 #include "gizmos.h"
 #include "lighting_edit.h"
+#include "rlgl.h"
 #include "settings.h"
 #include "transform.h"
 #include <raylib.h>
 #include <raymath.h>
+
+void gizmos_draw_grid(int slices, float spacing, Vector3 origin) {
+    int halfSlices = slices / 2;
+
+    rlBegin(RL_LINES);
+    for (int i = -halfSlices; i <= halfSlices; i++) {
+        rlColor3f(0.75f, 0.75f, 0.75f);
+
+        rlVertex3f(origin.x + (float)i * spacing, origin.y,
+                   origin.z - (float)halfSlices * spacing);
+        rlVertex3f(origin.x + (float)i * spacing, origin.y,
+                   origin.z + (float)halfSlices * spacing);
+
+        rlVertex3f(origin.x - (float)halfSlices * spacing, origin.y,
+                   origin.z + (float)i * spacing);
+        rlVertex3f(origin.x + (float)halfSlices * spacing, origin.y,
+                   origin.z + (float)i * spacing);
+    }
+    rlEnd();
+}
 
 void gizmos_render_transform_gizmo(Matrix transform) {
 
@@ -121,7 +142,15 @@ void gizmos_render_light_gizmos(LightingGroupHandle handle, Camera3D camera) {
 
         Vector2 light_pos = GetWorldToScreen(light_3d_pos, camera);
         Vector2 light_base_pos = GetWorldToScreen(
-            (Vector3){light_3d_pos.x, 0, light_3d_pos.z}, camera);
+            (Vector3){light_3d_pos.x, settings.grid_height, light_3d_pos.z},
+            camera);
+
+        if (light_3d_pos.y < settings.grid_height &&
+            light_base_pos.y > light_pos.y)
+            continue;
+        if (light_3d_pos.y > settings.grid_height &&
+            light_base_pos.y < light_pos.y)
+            continue;
 
         DrawLineEx(light_pos, light_base_pos, 2.0, light->color);
 

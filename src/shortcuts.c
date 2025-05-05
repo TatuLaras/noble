@@ -25,34 +25,16 @@ typedef struct {
 ShortcutBuffer shortcut_buffer = {0};
 
 static Shortcut shortcuts[] = {
-    {
-        .action = ACTION_TOGGLE_FPS_CONTROLS,
-        .keypresses = {KEY_F},
-        .require_shift_down = 1,
-    },
     {.action = ACTION_TOGGLE_GRID, .keypresses = {KEY_P}},
     {.action = ACTION_TOGGLE_GIZMOS, .keypresses = {KEY_O}},
     {.action = ACTION_TOGGLE_QUANTIZE, .keypresses = {KEY_Q}},
-    {
-        .action = ACTION_TOGGLE_ADDING_RAYCAST_INCLUDE_OBJECTS,
-        .keypresses = {KEY_I},
-    },
     {.action = ACTION_TOGGLE_LIGHTING_EDIT_MODE, .keypresses = {KEY_S}},
     {.action = ACTION_TOGGLE_LIGHTING, .keypresses = {KEY_L}},
-    {
-        .action = ACTION_TOGGLE_SELECTED_ENTITY_LIGHTING,
-        .keypresses = {KEY_S},
-        .require_shift_down = 1,
-    },
-    {
-        .action = ACTION_GRID_RESET,
-        .keypresses = {KEY_C},
-        .require_shift_down = 1,
-    },
     {.action = ACTION_OBJECT_DELETE, .keypresses = {KEY_D}},
     {.action = ACTION_OBJECT_DELETE, .keypresses = {KEY_DELETE}},
     {.action = ACTION_OBJECT_DELETE, .keypresses = {KEY_BACKSPACE}},
     {.action = ACTION_START_PICKING_ASSET, .keypresses = {KEY_SPACE}},
+    {.action = ACTION_START_PICKING_SKYBOX, .keypresses = {KEY_F10}},
     {.action = ACTION_OBJECT_START_TRANSLATE_X, .keypresses = {KEY_G, KEY_X}},
     {.action = ACTION_OBJECT_START_TRANSLATE_Y, .keypresses = {KEY_G, KEY_Y}},
     {.action = ACTION_OBJECT_START_TRANSLATE_Z, .keypresses = {KEY_G, KEY_Z}},
@@ -72,6 +54,27 @@ static Shortcut shortcuts[] = {
     {.action = ACTION_ASSET_SLOT_8, .keypresses = {KEY_EIGHT}},
     {.action = ACTION_ASSET_SLOT_9, .keypresses = {KEY_NINE}},
     {.action = ACTION_ASSET_SLOT_10, .keypresses = {KEY_ZERO}},
+    {.action = ACTION_TOGGLE_DEBUG_INFO, .keypresses = {KEY_F11}},
+    {.action = ACTION_TOGGLE_PROPERTIES_MENU, .keypresses = {KEY_N}},
+    {
+        .action = ACTION_TOGGLE_FPS_CONTROLS,
+        .keypresses = {KEY_F},
+        .require_shift_down = 1,
+    },
+    {
+        .action = ACTION_TOGGLE_ADDING_RAYCAST_INCLUDE_OBJECTS,
+        .keypresses = {KEY_I},
+    },
+    {
+        .action = ACTION_TOGGLE_SELECTED_ENTITY_LIGHTING,
+        .keypresses = {KEY_S},
+        .require_shift_down = 1,
+    },
+    {
+        .action = ACTION_GRID_RESET,
+        .keypresses = {KEY_C},
+        .require_alt_down = 1,
+    },
     {
         .action = ACTION_PICK_ASSET_FROM_SELECTED_ENTITY,
         .keypresses = {KEY_Q},

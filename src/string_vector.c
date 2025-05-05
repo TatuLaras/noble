@@ -125,13 +125,13 @@ void stringvec_truncate(StringVector *vec) {
     vec->indices_used = 0;
 }
 
-int stringvec_has(StringVector *vec, const char *string) {
+int64_t stringvec_index_of(StringVector *vec, const char *string) {
     size_t i = 0;
     char *candidate = 0;
     while ((candidate = stringvec_get(vec, i++))) {
         if (!strcmp(candidate, string))
-            return 1;
+            return i - 1;
     }
 
-    return 0;
+    return -1;
 }

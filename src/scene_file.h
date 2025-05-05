@@ -1,24 +1,29 @@
 #ifndef _SCENE_FILE
 #define _SCENE_FILE
 
-// Functions for storing a scene as a file
+/*
+Functions for storing a scene as a file.
+
+Scene file structure:
+    - A header, as described by struct `SceneFileHeader`, which will specify the
+    sizes (amount of entries) of the following sections.
+    - A table of asset names
+    - A table of light groups
+    - A table of light sources
+    - A table of entities
+ */
 
 #include "common.h"
 #include "lighting.h"
+#include <raylib.h>
 #include <stddef.h>
 #include <stdio.h>
 
 #define SCENE_FILE_MAGIC 0x1273
 #define SCENE_FILE_VERSION 0
 
-#include "scene.h"
 #include <stdint.h>
 
-/*
- * Scene file structure:
- * - Header, as described by `SceneFileHeader`
- * - Any amount of struct SceneFileEntity, count specified in header
- */
 typedef struct {
     uint16_t reserved : 16;
 } SceneFileFlags;
@@ -26,14 +31,20 @@ typedef struct {
 typedef struct {
     uint16_t magic;
     SceneFileFlags flags;
-    uint16_t version;
-    uint16_t lighting_group_table_entries;
-    uint32_t asset_table_entries;
+    uint16_t header_size;
 
-    // Empty space 4 bytes
+    uint16_t lighting_group_count;
+    uint32_t asset_count;
+    uint32_t light_source_count;
+    uint64_t entity_count;
 
-    size_t light_source_table_entries;
-    size_t entity_table_entries;
+    uint16_t lighting_group_size;
+    uint16_t asset_size;
+    uint16_t light_source_size;
+    uint16_t entity_size;
+
+    uint32_t skybox_count;
+    uint16_t skybox_size;
 } SceneFileHeader;
 
 typedef struct {
@@ -41,9 +52,8 @@ typedef struct {
 } SceneFileAsset;
 
 typedef struct {
-    char name[NAME_MAX_LENGTH];
     Color ambient_color;
-} SceneFileLightGroup;
+} SceneFileLightingGroup;
 
 typedef struct {
     Color color;
@@ -57,13 +67,23 @@ typedef struct {
 } SceneFileLightSource;
 
 typedef struct {
-    char name[NAME_MAX_LENGTH];
     Matrix transform;
+    uint32_t asset_index;
+    uint32_t light_group_index;
     uint8_t ignore_raycast;
     uint8_t is_unlit;
 } SceneFileEntity;
 
+typedef struct {
+    char name[NAME_MAX_LENGTH];
+} SceneFileSkybox;
+
+// Stores the current scene into a file.
 void scene_file_store(FILE *fp);
+// Loads scene information from a file and applies it to the current scene. An
+// empty scene along with lighting groups needs to be initalized before calling
+// this function.
+// Currently assumes there is only one light group and it's handle is 0.
 int scene_file_load(FILE *fp);
 
 #endif

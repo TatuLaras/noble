@@ -2,9 +2,16 @@
 
 #include "assets.h"
 #include "handles.h"
+#include "lighting.h"
+#include "lighting_edit.h"
 #include "model_files.h"
+#include "raygui.h"
 #include "settings.h"
+#include "skyboxes.h"
+#include "string_vector.h"
+#include "ui.h"
 #include <assert.h>
+#include <raylib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,6 +20,7 @@
 #define ENTITIES_GROWTH_FACTOR 2
 
 Scene scene = {0};
+static Model skybox_model = {0};
 
 // Loads a model of asset name `asset_name` from the asset directory (see
 // settings.h).
@@ -21,12 +29,12 @@ static inline Model load_asset_model(AssetHandle handle) {
     assert(asset_name);
 
     char filepath[MAX_PATH_LENGTH + 1] = {0};
-    assert(strlen(settings.asset_directory) + strlen(asset_name) + 4 <=
-           MAX_PATH_LENGTH);
 
-    strcpy(filepath, settings.asset_directory);
+    strcpy(filepath, settings.project_directory);
+    strcat(filepath, "assets/");
     strcat(filepath, asset_name);
     strcat(filepath, ".obj");
+
     Model model = LoadModel(filepath);
     if (!model.meshCount)
         return (Model){0};
@@ -136,4 +144,65 @@ void scene_free(void) {
     modelvec_free(&scene.models);
     if (scene.entities)
         free(scene.entities);
+}
+
+ModelData *scene_entity_get_model(Entity *entity) {
+    return modelvec_get(&scene.models, entity->model_handle);
+}
+
+void scene_render_properties_menu(void) {
+
+    uint16_t title_height = 20;
+    uint16_t picker_height = 120;
+    uint16_t spacing_height = 10;
+
+    LightingGroup *lighting_group =
+        lighting_scene_get_group(lighting_edit_state.current_group);
+
+    Rectangle title_rect = ui_properties_menu_reserve_height(title_height);
+    GuiLabel(title_rect, "Scene");
+
+    // Color picker
+    Color before = lighting_group->ambient_color;
+    Rectangle color_picker_rect =
+        ui_properties_menu_reserve_height(picker_height);
+    color_picker_rect.width -= 32;
+    color_picker_rect.x += 2;
+    color_picker_rect.y += 4;
+    GuiColorPicker(color_picker_rect, 0, &lighting_group->ambient_color);
+    Color after = lighting_group->ambient_color;
+
+    if (before.r != after.r || before.b != after.b || before.g != after.g ||
+        before.a != after.a)
+        update_shader_data(lighting_edit_state.current_group);
+
+    ui_properties_menu_reserve_height(spacing_height);
+
+    ui_properties_menu_reserve_section_end();
+}
+
+void scene_load_skybox(void) {
+    if (!skybox_model.meshCount)
+        skybox_model = LoadModel("resources/skybox.obj");
+
+    char *skybox_name = skyboxes_get_name(scene.skybox_handle);
+    assert(skybox_name);
+
+    char path[MAX_PATH_LENGTH] = {0};
+    strcpy(path, settings.project_directory);
+    strcat(path, "skyboxes/");
+    strcat(path, skybox_name);
+    strcat(path, ".aseprite");
+    load_aseprite_texture(path, &skybox_model);
+}
+
+void scene_set_skybox(SkyboxHandle handle) {
+    scene.skybox_handle = handle;
+    scene_load_skybox();
+}
+
+void scene_render_skybox(Camera3D camera) {
+    BeginMode3D(camera);
+    DrawModel(skybox_model, camera.position, 1.0, WHITE);
+    EndMode3D();
 }

@@ -55,7 +55,6 @@ typedef struct {
 } LightingScene;
 
 extern LightingScene lighting_scene;
-extern Shader unlit_shader;
 
 void lighting_scene_init(void);
 void lighting_scene_free(void);
@@ -79,6 +78,8 @@ void lighting_scene_set_enabled(uint32_t enabled);
 // Disables or enables all shading in a lighting scene.
 void lighting_group_set_enabled(LightingGroupHandle handle, uint32_t enabled);
 
+// Updates all shader data for lighting group.
+void update_shader_data(LightingGroupHandle handle);
 // Updates a single light source's data in the lighting group shader. Returns 1
 // on out-of-bound `handle` s.
 int light_source_update(LightingGroupHandle group_handle,
@@ -86,5 +87,8 @@ int light_source_update(LightingGroupHandle group_handle,
 
 // Get lighting group by handle.
 LightingGroup *lighting_scene_get_group(LightingGroupHandle handle);
+
+// Disables or enables the vertex lighting shader on a specific entity.
+void lighting_set_entity_unlit(Entity *entity, int is_unlit);
 
 #endif

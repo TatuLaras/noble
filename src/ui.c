@@ -24,6 +24,10 @@
 #endif
 
 #define PROPERTIES_PANEL_WIDTH 140
+#define PROPERTIES_PANEL_PADDING 8
+#define PROPERTIES_PANEL_SPACING 2
+static const Color PROPERTIES_BACKGROUND_COLOR = {0x75, 0x32, 0x33, 0xff};
+static const Color PROPERTIES_BORDER_COLOR = {0xda, 0x57, 0x57, 0xff};
 
 static uint16_t properties_menu_height = 0;
 
@@ -88,11 +92,48 @@ void ui_render(uint16_t screen_width, uint16_t screen_height) {
     y += 200;
 }
 
+static inline void draw_vertical_border(Rectangle rect) {
+    DrawLine(rect.x, rect.y, rect.x, rect.y + rect.height,
+             PROPERTIES_BORDER_COLOR);
+    DrawLine(rect.x + rect.width, rect.y, rect.x + rect.width,
+             rect.y + rect.height, PROPERTIES_BORDER_COLOR);
+}
+
 Rectangle ui_properties_menu_reserve_height(uint16_t height) {
-    Rectangle rect = {0, properties_menu_height, PROPERTIES_PANEL_WIDTH,
-                      height};
-    properties_menu_height += height;
-    return rect;
+    if (properties_menu_height == 0)
+        ui_properties_menu_reserve_spacer();
+
+    Rectangle outer_rect = {
+        1,
+        properties_menu_height,
+        PROPERTIES_PANEL_WIDTH + PROPERTIES_PANEL_PADDING * 2,
+        height + PROPERTIES_PANEL_SPACING * 2,
+    };
+    DrawRectangleRec(outer_rect, PROPERTIES_BACKGROUND_COLOR);
+    draw_vertical_border(outer_rect);
+
+    Rectangle inner_rect = {1 + PROPERTIES_PANEL_PADDING,
+                            properties_menu_height + PROPERTIES_PANEL_SPACING,
+                            PROPERTIES_PANEL_WIDTH, height};
+    properties_menu_height += outer_rect.height;
+    return inner_rect;
+}
+
+void ui_properties_menu_reserve_section_end(void) {
+    Rectangle padding = {1, properties_menu_height,
+                         PROPERTIES_PANEL_WIDTH + PROPERTIES_PANEL_PADDING * 2,
+                         PROPERTIES_PANEL_PADDING};
+    DrawRectangleRec(padding, PROPERTIES_BACKGROUND_COLOR);
+    draw_vertical_border(padding);
+    properties_menu_height += padding.height;
+    ui_properties_menu_reserve_spacer();
+}
+
+void ui_properties_menu_reserve_spacer(void) {
+    DrawLine(0, properties_menu_height,
+             PROPERTIES_PANEL_WIDTH + PROPERTIES_PANEL_PADDING * 2 + 1,
+             properties_menu_height, PROPERTIES_BORDER_COLOR);
+    properties_menu_height += 1;
 }
 
 void ui_properties_menu_reset(void) {
@@ -100,5 +141,5 @@ void ui_properties_menu_reset(void) {
 }
 
 Rectangle ui_properties_menu_get_rect(void) {
-    return (Rectangle){0, 0, PROPERTIES_PANEL_WIDTH, properties_menu_height};
+    return (Rectangle){1, 0, PROPERTIES_PANEL_WIDTH, properties_menu_height};
 }

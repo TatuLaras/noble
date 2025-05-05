@@ -7,7 +7,7 @@
 #include <stddef.h>
 
 Vector3 raycast_ground_intersection(Ray ray) {
-    float t = (-1 * ray.position.y) / ray.direction.y;
+    float t = (settings.grid_height - ray.position.y) / ray.direction.y;
     return Vector3Add(ray.position, Vector3Scale(ray.direction, t));
 }
 
@@ -37,8 +37,7 @@ ObjectRaycastResult raycast_scene_objects(Ray ray) {
         if (entity->is_destroyed)
             continue;
 
-        ModelData *model_data =
-            modelvec_get(&scene.models, entity->model_handle);
+        ModelData *model_data = scene_entity_get_model(entity);
 
         collision = GetRayCollisionMesh(ray, model_data->model.meshes[0],
                                         entity->transform);

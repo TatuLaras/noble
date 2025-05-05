@@ -10,19 +10,25 @@
 
 #define ASSET_PICKER_MATCHES_MAX_COUNT 6
 
+typedef enum {
+    PICKER_MODE_ASSET,
+    PICKER_MODE_SKYBOX,
+} AssetPickerMode;
+
 typedef struct {
     int picking_asset;
     char search_query[100];
     size_t search_query_used;
-    AssetHandle matches[ASSET_PICKER_MATCHES_MAX_COUNT];
+    size_t matches[ASSET_PICKER_MATCHES_MAX_COUNT];
     uint8_t matches_used;
     size_t selected_match;
+    AssetPickerMode mode;
 } AssetPickerState;
 
 extern AssetPickerState asset_picker;
 
 // Start a new search.
-void asset_picker_start_search(void);
+void asset_picker_start_search(AssetPickerMode mode);
 // Input a new key to the search, can be a normal letter in which case it gets
 // appended to the search query, or it can be a special hotkey.
 void asset_picker_input_key(KeyboardKey key, int ctrl_down);

@@ -1,5 +1,6 @@
 #include "lighting.h"
 
+#include "handles.h"
 #include "lighting_edit.h"
 #include "model_vector.h"
 #include "scene.h"
@@ -16,7 +17,7 @@
 #define GROWTH_FACTOR 2
 
 static const char *shader_path = "resources/shaders/vertex_lighting.vert";
-Shader unlit_shader = {0};
+static Shader unlit_shader = {0};
 
 LightingScene lighting_scene = {0};
 
@@ -33,7 +34,7 @@ static LightingGroupHandle lighting_scene_add_group(LightingGroup group) {
     return lighting_scene.groups_size - 1;
 }
 
-static inline void update_shader_data(LightingGroupHandle handle) {
+void update_shader_data(LightingGroupHandle handle) {
     LightingGroup *group = lighting_scene_get_group(handle);
     if (!group)
         return;
@@ -49,7 +50,7 @@ static inline void update_shader_data(LightingGroupHandle handle) {
                    &group->is_shading_disabled, SHADER_UNIFORM_INT);
 
     for (size_t i = 0; i < LIGHTING_MAX_LIGHTS_PER_GROUP; i++) {
-        if (light_source_update(handle, i++))
+        if (light_source_update(handle, i))
             break;
     }
 }
@@ -65,6 +66,7 @@ int light_source_update(LightingGroupHandle group_handle,
                         LightSourceHandle light_handle) {
     LightingGroup *group = lighting_scene_get_group(group_handle);
 
+    assert(group);
     if (!group || light_handle >= group->lights_size)
         return 1;
 
@@ -141,7 +143,7 @@ void lighting_group_add_entity(LightingGroupHandle group_handle,
         return;
 
     entity->lighting_group_handle = group_handle;
-    ModelData *model_data = modelvec_get(&scene.models, entity->model_handle);
+    ModelData *model_data = scene_entity_get_model(entity);
     model_data->model.materials[0].shader = group->shader;
 }
 
@@ -202,5 +204,27 @@ void lighting_group_set_enabled(LightingGroupHandle group_handle,
 void lighting_scene_set_enabled(uint32_t enabled) {
     for (size_t i = 0; i < lighting_scene.groups_size; i++) {
         lighting_group_set_enabled(i, enabled);
+    }
+}
+
+void lighting_set_entity_unlit(Entity *entity, int is_unlit) {
+    ModelData *model_data = scene_entity_get_model(entity);
+    assert(model_data);
+
+    if (!model_data->is_private_instance) {
+        if (scene_entity_model_unlink(entity))
+            return;
+        model_data = scene_entity_get_model(entity);
+        assert(model_data);
+    }
+
+    entity->is_unlit = is_unlit;
+    if (entity->is_unlit) {
+        model_data->model.materials[0].shader = unlit_shader;
+    } else {
+        LightingGroup *group =
+            lighting_scene_get_group(entity->lighting_group_handle);
+        assert(group);
+        model_data->model.materials[0].shader = group->shader;
     }
 }

@@ -5,8 +5,9 @@ Settings settings = {
     .grid_density = 1.0,
     .grid_enabled = 1,
     .gizmos_enabled = 1,
+    .properties_menu_enabled = 1,
     .lighting_enabled = 0,
     .adding_raycast_include_objects = 1,
     .gizmo_size = 1.0,
-    .asset_directory = "/home/tatu/_repos/ebb/assets/",
+    .project_directory = "/home/tatu/_repos/ebb/",
 };

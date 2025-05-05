@@ -3,17 +3,20 @@
 #include "adding.h"
 #include "asset_picker.h"
 #include "assets.h"
+#include "common.h"
 #include "editor.h"
 #include "gizmos.h"
 #include "lighting.h"
 #include "lighting_edit.h"
 #include "model_vector.h"
 #include "raymath.h"
+#include "rlgl.h"
 #include "scene.h"
 #include "scene_file.h"
 #include "selection.h"
 #include "settings.h"
 #include "shortcuts.h"
+#include "skyboxes.h"
 #include "transform.h"
 #include "ui.h"
 #include <assert.h>
@@ -29,14 +32,26 @@
 static LightingGroupHandle lighting_group_handle;
 
 static Camera3D camera = {0};
+static RenderTexture scene_render_target = {0};
 
 static void render(void) {
-    BeginDrawing();
+    if (!scene_render_target.id || IsWindowResized()) {
+        if (scene_render_target.id)
+            UnloadRenderTexture(scene_render_target);
+        scene_render_target =
+            LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
+        printf("Reload render texture\n");
+    }
 
-    ClearBackground((Color){.r = 0x32, .g = 0x15, .b = 0x15});
+    BeginTextureMode(scene_render_target);
+    ClearBackground((Color){0});
 
-    if (settings.lighting_edit_mode_enabled)
-        ClearBackground(BLACK);
+    if (settings.lighting_edit_mode_enabled) {
+        LightingGroup *group =
+            lighting_scene_get_group(lighting_edit_state.current_group);
+        assert(group);
+        ClearBackground(group->ambient_color);
+    }
 
     if (shortcuts_waiting_for_keypress())
         ClearBackground((Color){.r = 0x5d, .g = 0x52, .b = 0x52});
@@ -50,8 +65,7 @@ static void render(void) {
         if (entity->is_destroyed)
             continue;
 
-        ModelData *model_data =
-            modelvec_get(&scene.models, entity->model_handle);
+        ModelData *model_data = scene_entity_get_model(entity);
 
         Matrix transform = entity->transform;
 
@@ -77,20 +91,39 @@ static void render(void) {
             gizmos_render_transform_gizmo(transform);
     }
 
-    if (settings.grid_enabled)
-        DrawGrid(100 / settings.grid_density, settings.grid_density);
+    if (settings.grid_enabled) {
+        Vector3 camera_pos = vector3_quantize(camera.position);
+        gizmos_draw_grid(80 / settings.grid_density, settings.grid_density,
+                         (Vector3){camera_pos.x, settings.grid_height + 0.002,
+                                   camera_pos.z});
+    }
 
     EndMode3D();
+    EndTextureMode();
+
+    // Actual draw loop
+    BeginDrawing();
+    ClearBackground(BLACK);
+
+    // Skybox
+    scene_render_skybox(camera);
+
+    // 3D scene
+    DrawTextureRec(scene_render_target.texture,
+                   (Rectangle){0, 0, (float)scene_render_target.texture.width,
+                               (float)-scene_render_target.texture.height},
+                   (Vector2){0, 0}, WHITE);
 
     if (settings.lighting_edit_mode_enabled && settings.gizmos_enabled)
         gizmos_render_light_gizmos(lighting_group_handle, camera);
 
-    lighting_edit_render_properties_menu();
+    if (settings.properties_menu_enabled) {
+        lighting_edit_render_properties_menu();
+        scene_render_properties_menu();
+    }
 
-    // Draw properties menu bounds
-    Rectangle properties = ui_properties_menu_get_rect();
-    DrawRectangleLines(properties.x, properties.y, properties.width,
-                       properties.height, (Color){0xda, 0x57, 0x57, 0xff});
+    if (settings.debug_info_enabled)
+        DrawFPS(0, 0);
 
     ui_render(GetScreenWidth(), GetScreenHeight());
 
@@ -163,8 +196,10 @@ static inline void handle_inputs(void) {
     }
 
     if (IsKeyDown(KEY_C)) {
-        editor_adjust_grid_density(scroll);
-        return;
+        if (IsKeyDown(KEY_LEFT_SHIFT))
+            editor_adjust_grid_height(scroll);
+        else
+            editor_adjust_grid_density(scroll);
     }
 
     // Shortcuts
@@ -243,24 +278,32 @@ static inline void handle_inputs(void) {
     }
 }
 
-int game_init(char *scene_filepath) {
-    settings.scene_filepath = scene_filepath;
-    FILE *fp = fopen(scene_filepath, "r");
+static inline void load_scene(void) {
+    FILE *fp = fopen(settings.scene_filepath, "r");
+    if (!fp) {
+        perror("WARNING: Could not open scene file");
+        return;
+    }
     if (scene_file_load(fp)) {
-        fclose(fp);
-        return 1;
+        printf("WARNING: Did not load scene from file, either it doesn't exist "
+               "or is in the wrong format.\n");
     }
     fclose(fp);
+}
+
+int game_init(char *scene_filepath) {
+    settings.scene_filepath = scene_filepath;
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(800, 450, "Noble");
     SetTargetFPS(60);
 
     ui_init();
-    assets_fetch_all();
-
     scene_init();
     lighting_scene_init();
+
+    assets_fetch_all();
+    skyboxes_fetch_all();
 
     lighting_group_handle =
         lighting_group_create((Color){0x21, 0x0d, 0x1f, 255});
@@ -273,6 +316,8 @@ int game_init(char *scene_filepath) {
     camera.up = (Vector3){0.0f, 1.0f, 0.0f};
     camera.fovy = 45.0f;
 
+    load_scene();
+    scene_load_skybox();
     return 0;
 }
 

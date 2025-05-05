@@ -9,5 +9,6 @@ typedef uint16_t LightSourceHandle;
 typedef size_t EntityHandle;
 typedef size_t ModelHandle;
 typedef size_t AssetHandle;
+typedef size_t SkyboxHandle;
 
 #endif

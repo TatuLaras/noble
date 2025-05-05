@@ -3,7 +3,6 @@
 
 // User interface implementation
 
-#include "asset_picker.h"
 #include <raylib.h>
 #include <stdint.h>
 
@@ -15,6 +14,9 @@ void ui_render(uint16_t screen_width, uint16_t screen_height);
 // Reserves a space within the properties edit panel which the caller can then
 // draw into.
 Rectangle ui_properties_menu_reserve_height(uint16_t height);
+void ui_properties_menu_reserve_spacer(void);
+void ui_properties_menu_reserve_section_end(void);
+
 // Resets the properties menu height allocations. Meant to be called at
 // the end of every frame after all UI has been drawn (including property
 // menus).

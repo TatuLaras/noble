@@ -31,13 +31,13 @@ static char *path_get_corresponding_texture_file(const char *src) {
     return destination;
 }
 
-void try_load_corresponding_texture(const char *filepath, Model *model) {
-    char *texture_file = path_get_corresponding_texture_file(filepath);
-
-    Image *image = aseprite_load_as_image(texture_file);
-    free(texture_file);
+void load_aseprite_texture(const char *filepath, Model *model) {
+    Image *image = aseprite_load_as_image(filepath);
     if (!image)
         return;
+
+    // if (model->materials[0].maps[MATERIAL_MAP_DIFFUSE].texture.id)
+    //     UnloadTexture(model->materials[0].maps[MATERIAL_MAP_DIFFUSE].texture);
 
     Texture2D texture = LoadTextureFromImage(*image);
     UnloadImage(*image);
@@ -46,6 +46,12 @@ void try_load_corresponding_texture(const char *filepath, Model *model) {
         return;
 
     model->materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texture;
+}
+
+void try_load_corresponding_texture(const char *filepath, Model *model) {
+    char *texture_file = path_get_corresponding_texture_file(filepath);
+    load_aseprite_texture(texture_file, model);
+    free(texture_file);
 }
 
 uint64_t get_most_recent_file_modification(StringVector *model_filepaths) {

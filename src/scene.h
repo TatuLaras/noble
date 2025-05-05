@@ -26,11 +26,14 @@ typedef struct {
     size_t entities_used;
     size_t entities_allocated;
     ModelVector models;
+    SkyboxHandle skybox_handle;
 } Scene;
 
 extern Scene scene;
 
 void scene_init(void);
+void scene_free(void);
+
 // Adds a new entity to the scene. Assumes a raylib context is already
 // initialized. Returns 1 on error.
 int scene_add(Entity entity, EntityHandle *out_entity_handle);
@@ -41,6 +44,15 @@ void scene_remove(EntityHandle handle);
 Entity *scene_get_entity(EntityHandle handle);
 // Unlinks an entity's model into it's own private instance of that model.
 int scene_entity_model_unlink(Entity *entity);
-void scene_free(void);
+// Gets the model of an entity.
+ModelData *scene_entity_get_model(Entity *entity);
+// Loads the currently set skybox as scene background.
+void scene_load_skybox(void);
+// Renders the current skybox as scene background.
+void scene_render_skybox(Camera3D camera);
+// Sets the current skybox
+void scene_set_skybox(SkyboxHandle handle);
+
+void scene_render_properties_menu(void);
 
 #endif

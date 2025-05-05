@@ -3,10 +3,11 @@
 #include "assets.h"
 #include "common.h"
 #include "handles.h"
+#include "scene.h"
 #include "settings.h"
+#include "skyboxes.h"
 #include "string_vector.h"
 #include <assert.h>
-#include <raylib.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
@@ -16,15 +17,25 @@ AssetPickerState asset_picker = {0};
 static char newline_separated_matches[4096] = {0};
 static int newline_separated_matches_valid = 0;
 
+static inline StringVector *get_list(void) {
+    switch (asset_picker.mode) {
+    case PICKER_MODE_ASSET:
+        return &asset_list;
+    case PICKER_MODE_SKYBOX:
+        return &skybox_list;
+    }
+    return 0;
+}
 static inline void update_matches(void) {
     newline_separated_matches_valid = 0;
     asset_picker.selected_match = 0;
-    assert(asset_list.data);
+
+    StringVector *list = get_list();
 
     asset_picker.matches_used = 0;
     char *candidate = 0;
     AssetHandle i = 0;
-    while ((candidate = assets_get_name(i++)) &&
+    while ((candidate = stringvec_get(list, i++)) &&
            asset_picker.matches_used < ASSET_PICKER_MATCHES_MAX_COUNT) {
 
         // Not a match
@@ -67,18 +78,25 @@ static void stop_search(void) {
     asset_picker.picking_asset = 0;
 }
 
-void asset_picker_start_search(void) {
+void asset_picker_start_search(AssetPickerMode mode) {
     asset_picker.search_query_used = 0;
     asset_picker.picking_asset = 1;
+    asset_picker.mode = mode;
     update_matches();
 }
 
 void asset_picker_select_current_option(void) {
     if (asset_picker.selected_match < asset_picker.matches_used) {
-        assert(
-            assets_get_name(asset_picker.matches[asset_picker.selected_match]));
-        settings.selected_asset[settings.current_asset_slot] =
-            asset_picker.matches[asset_picker.selected_match];
+        size_t handle = asset_picker.matches[asset_picker.selected_match];
+
+        switch (asset_picker.mode) {
+        case PICKER_MODE_ASSET:
+            settings.selected_asset[settings.current_asset_slot] = handle;
+            break;
+        case PICKER_MODE_SKYBOX:
+            scene_set_skybox(handle);
+            break;
+        }
     }
     stop_search();
 }
@@ -113,11 +131,11 @@ char *asset_picker_get_newline_separated_matches(void) {
     if (newline_separated_matches_valid)
         return newline_separated_matches;
 
-    printf("INFO: Recalculate newline separated string for matches\n");
+    StringVector *list = get_list();
 
     size_t pos = 0;
     for (AssetHandle i = 0; i < asset_picker.matches_used; i++) {
-        char *name = assets_get_name(asset_picker.matches[i]);
+        char *name = stringvec_get(list, asset_picker.matches[i]);
         assert(name);
 
         for (size_t j = 0; name[j]; j++)
