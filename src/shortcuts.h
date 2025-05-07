@@ -45,6 +45,8 @@ typedef enum {
     ACTION_SAVE_SCENE,
     ACTION_TOGGLE_DEBUG_INFO,
     ACTION_TOGGLE_PROPERTIES_MENU,
+    ACTION_CAMERA_RESET,
+    ACTION_CAMERA_FOCUS_SELECTED,
 } ShortcutAction;
 
 // Registers the currently pressed key and if an action has taken place it

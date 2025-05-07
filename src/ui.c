@@ -78,7 +78,8 @@ void ui_render(uint16_t screen_width, uint16_t screen_height) {
     if (!asset_picker.picking_asset)
         return;
 
-    asset_picker.search_query[asset_picker.search_query_used] = 0;
+    asset_picker.search_query[asset_picker.search_query_used] = '_';
+    asset_picker.search_query[asset_picker.search_query_used + 1] = 0;
 
     uint32_t y = 0;
     GuiStatusBar((Rectangle){0, y, screen_width, 20},

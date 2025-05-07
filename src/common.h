@@ -13,8 +13,11 @@ float minf(float a, float b);
 #define NAME_MAX_LENGTH 128
 
 float quantize(float value, float interval);
-// Quantizes a vector depending on the current snap settings.
+// Quantizes a vector to current settings grid density.
 Vector3 vector3_quantize(Vector3 value);
+// Quantizes a vector or keeps in unaffected depending on the current snap
+// settings.
+Vector3 vector3_settings_quantize(Vector3 value);
 // Same as `vector3_quantize` but with a custom `increment`.
 Vector3 vector3_quantize_custom(Vector3 value, float increment);
 // Quantizes a scalar value depending on the current snap settings.

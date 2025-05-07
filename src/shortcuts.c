@@ -56,6 +56,8 @@ static Shortcut shortcuts[] = {
     {.action = ACTION_ASSET_SLOT_10, .keypresses = {KEY_ZERO}},
     {.action = ACTION_TOGGLE_DEBUG_INFO, .keypresses = {KEY_F11}},
     {.action = ACTION_TOGGLE_PROPERTIES_MENU, .keypresses = {KEY_N}},
+    {.action = ACTION_CAMERA_FOCUS_SELECTED, .keypresses = {KEY_F}},
+    {.action = ACTION_CAMERA_RESET, .keypresses = {KEY_B}},
     {
         .action = ACTION_TOGGLE_FPS_CONTROLS,
         .keypresses = {KEY_F},

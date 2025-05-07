@@ -36,9 +36,6 @@ void load_aseprite_texture(const char *filepath, Model *model) {
     if (!image)
         return;
 
-    // if (model->materials[0].maps[MATERIAL_MAP_DIFFUSE].texture.id)
-    //     UnloadTexture(model->materials[0].maps[MATERIAL_MAP_DIFFUSE].texture);
-
     Texture2D texture = LoadTextureFromImage(*image);
     UnloadImage(*image);
     free(image);

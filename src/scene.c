@@ -8,7 +8,6 @@
 #include "raygui.h"
 #include "settings.h"
 #include "skyboxes.h"
-#include "string_vector.h"
 #include "ui.h"
 #include <assert.h>
 #include <raylib.h>

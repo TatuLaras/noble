@@ -25,6 +25,7 @@ extern TransformOperation transform_operation;
 
 // Gets an equivalent transformation matrix from current transform operation.
 Matrix transform_get_matrix(void);
+Vector3 transform_matrix_get_position(Matrix transform);
 
 // Starts the transforming process for an entity.
 void transform_start(TransformMode mode, Axis axis, Entity *entity);

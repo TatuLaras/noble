@@ -20,7 +20,7 @@ Matrix raycast_get_desired_model_transform(Ray ray) {
             targetted_position = result.point;
     }
 
-    targetted_position = vector3_quantize(targetted_position);
+    targetted_position = vector3_settings_quantize(targetted_position);
 
     Matrix translation = MatrixTranslate(
         targetted_position.x, targetted_position.y, targetted_position.z);

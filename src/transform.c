@@ -35,7 +35,7 @@ Matrix transform_get_matrix(void) {
 
     switch (transform_operation.mode) {
     case TRANSFORM_TRANSLATE:
-        axis_transform = vector3_quantize(axis_transform);
+        axis_transform = vector3_settings_quantize(axis_transform);
         return MatrixTranslate(axis_transform.x, axis_transform.y,
                                axis_transform.z);
     case TRANSFORM_ROTATE:
@@ -47,6 +47,10 @@ Matrix transform_get_matrix(void) {
     }
 
     return MatrixIdentity();
+}
+
+Vector3 transform_matrix_get_position(Matrix transform) {
+    return (Vector3){transform.m12, transform.m13, transform.m14};
 }
 
 void transform_start(TransformMode mode, Axis axis, Entity *entity) {

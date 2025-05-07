@@ -12,6 +12,7 @@
 #include "transform.h"
 #include <assert.h>
 #include <raylib.h>
+#include <raymath.h>
 #include <stdio.h>
 
 #define TRANSFORM_BASE_SENSITIVITY 0.006
@@ -19,6 +20,7 @@
 #define MIN_GRID_DENSITY (1.0 / 64.0)
 #define MAX_GRID_DENSITY 32
 #define GIZMO_SIZE_ADJUST_SENSITIVITY 0.08
+#define FPV_PLAYER_HEIGHT 1.5
 
 static inline void start_transform(TransformMode mode, Axis axis) {
     if (settings.lighting_edit_mode_enabled) {
@@ -91,10 +93,10 @@ void editor_cancel_transform(void) {
     EnableCursor();
 }
 
-void editor_execute_action(ShortcutAction action) {
+void editor_execute_action(ShortcutAction action, Camera *camera) {
     switch (action) {
     case ACTION_TOGGLE_FPS_CONTROLS:
-        editor_set_fps_controls_enabled(!settings.fps_controls_enabled);
+        editor_set_fpv_controls_enabled(camera, !settings.fps_controls_enabled);
         break;
     case ACTION_TOGGLE_GRID:
         settings.grid_enabled = !settings.grid_enabled;
@@ -218,6 +220,17 @@ void editor_execute_action(ShortcutAction action) {
         fclose(fp);
     } break;
 
+    case ACTION_CAMERA_RESET:
+        camera->position = (Vector3){0.0f, 6.0f, 6.0f};
+        camera->target = (Vector3){0.0f, 0.0f, 0.0f};
+        break;
+    case ACTION_CAMERA_FOCUS_SELECTED: {
+        Entity *entity = selection_get_selected_entity();
+        if (!entity)
+            break;
+        camera->target = transform_matrix_get_position(entity->transform);
+    } break;
+
     case ACTION_NONE:
         break;
     case ACTION_TOGGLE_TILE_MODE:
@@ -266,9 +279,9 @@ void editor_added_light_adjust(float amount, int slow_mode) {
 }
 
 void editor_adjust_grid_density(float amount) {
-    if (amount > 0)
+    if (amount < 0)
         settings.grid_density /= 2;
-    else if (amount < 0)
+    else if (amount > 0)
         settings.grid_density *= 2;
 
     if (settings.grid_density < MIN_GRID_DENSITY)
@@ -290,8 +303,10 @@ void editor_adjust_gizmo_size(float amount) {
         settings.gizmo_size = 0.1;
 }
 
-void editor_set_fps_controls_enabled(int enabled) {
+void editor_set_fpv_controls_enabled(Camera *camera, int enabled) {
     settings.fps_controls_enabled = enabled;
+    camera->position.y = settings.grid_height + FPV_PLAYER_HEIGHT;
+    camera->target.y = settings.grid_height + FPV_PLAYER_HEIGHT;
 
     if (enabled)
         DisableCursor();

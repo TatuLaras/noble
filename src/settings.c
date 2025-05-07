@@ -2,7 +2,7 @@
 
 Settings settings = {
     .quantize_to_grid_enabled = 1,
-    .grid_density = 1.0,
+    .grid_density = 2.0,
     .grid_enabled = 1,
     .gizmos_enabled = 1,
     .properties_menu_enabled = 1,

@@ -144,6 +144,7 @@ void lighting_group_add_entity(LightingGroupHandle group_handle,
 
     entity->lighting_group_handle = group_handle;
     ModelData *model_data = scene_entity_get_model(entity);
+    assert(model_data->model.meshCount);
     model_data->model.materials[0].shader = group->shader;
 }
 

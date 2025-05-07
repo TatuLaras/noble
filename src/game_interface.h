@@ -1,6 +1,7 @@
 #ifndef _GAME_INTERFACE
 #define _GAME_INTERFACE
 
+#include <raylib.h>
 #include <stddef.h>
 
 int game_init(char *scene_filepath);

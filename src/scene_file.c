@@ -216,6 +216,16 @@ int scene_file_load(FILE *fp) {
     char *asset_table = (char *)offset;
 
     offset += header.asset_size * header.asset_count;
+
+    for (size_t i = 0; i < header.lighting_group_count; i++) {
+        SceneFileLightingGroup group = {0};
+        memcpy(&group, offset + i * header.lighting_group_size,
+               header.lighting_group_size);
+
+        LightingGroup *default_group = lighting_scene_get_group(0);
+        default_group->ambient_color = group.ambient_color;
+    }
+
     offset += header.lighting_group_size * header.lighting_group_count;
 
     for (size_t i = 0; i < header.light_source_count; i++) {

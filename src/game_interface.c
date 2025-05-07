@@ -9,6 +9,7 @@
 #include "lighting.h"
 #include "lighting_edit.h"
 #include "model_vector.h"
+#include "orbital_controls.h"
 #include "raymath.h"
 #include "rlgl.h"
 #include "scene.h"
@@ -92,10 +93,10 @@ static void render(void) {
     }
 
     if (settings.grid_enabled) {
-        Vector3 camera_pos = vector3_quantize(camera.position);
-        gizmos_draw_grid(80 / settings.grid_density, settings.grid_density,
-                         (Vector3){camera_pos.x, settings.grid_height + 0.002,
-                                   camera_pos.z});
+        Vector3 origin = vector3_quantize(camera.target);
+        gizmos_draw_grid(
+            80 / settings.grid_density, settings.grid_density,
+            (Vector3){origin.x, settings.grid_height + 0.002, origin.z});
     }
 
     EndMode3D();
@@ -170,18 +171,31 @@ static inline void handle_inputs(void) {
 
     // FPS style movement
     //  TODO: some easier controls as well as an option
+
+    // Orbit controls
+
+    if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE))
+        DisableCursor();
+    if (IsMouseButtonReleased(MOUSE_BUTTON_MIDDLE))
+        EnableCursor();
+
+    if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE)) {
+        orbital_camera_update(&camera);
+        return;
+    }
+
     if (settings.fps_controls_enabled) {
         if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_CAPS_LOCK) ||
             IsMouseButtonPressed(MOUSE_BUTTON_LEFT) ||
             IsMouseButtonPressed(MOUSE_BUTTON_RIGHT))
-            editor_set_fps_controls_enabled(0);
+            editor_set_fpv_controls_enabled(&camera, 0);
 
         float delta_time = GetFrameTime();
         float vertical_movement = 0;
 
         if (IsKeyDown(KEY_SPACE))
             vertical_movement = delta_time * VERTICAL_MOVEMENT_SPEED;
-        else if (IsKeyDown(KEY_LEFT_SHIFT))
+        else if (IsKeyDown(KEY_LEFT_CONTROL))
             vertical_movement = delta_time * VERTICAL_MOVEMENT_SPEED * -1;
 
         camera.position.y += vertical_movement;
@@ -191,8 +205,15 @@ static inline void handle_inputs(void) {
         return;
     }
 
+    // Shortcuts
+    ShortcutAction action = shortcuts_get_action(
+        GetKeyPressed(), IsKeyDown(KEY_LEFT_SHIFT), IsKeyDown(KEY_LEFT_CONTROL),
+        IsKeyDown(KEY_LEFT_ALT));
+    editor_execute_action(action, &camera);
+
     if (IsKeyDown(KEY_V)) {
         editor_adjust_gizmo_size(scroll);
+        return;
     }
 
     if (IsKeyDown(KEY_C)) {
@@ -200,13 +221,8 @@ static inline void handle_inputs(void) {
             editor_adjust_grid_height(scroll);
         else
             editor_adjust_grid_density(scroll);
+        return;
     }
-
-    // Shortcuts
-    ShortcutAction action = shortcuts_get_action(
-        GetKeyPressed(), IsKeyDown(KEY_LEFT_SHIFT), IsKeyDown(KEY_LEFT_CONTROL),
-        IsKeyDown(KEY_LEFT_ALT));
-    editor_execute_action(action);
 
     if (transform_operation.mode != TRANSFORM_NONE) {
 
@@ -276,6 +292,9 @@ static inline void handle_inputs(void) {
         editor_mouse_select_object(ray);
         return;
     }
+
+    // Scroll wheel not used for anything else, zoom
+    orbital_adjust_camera_zoom(&camera, GetMouseWheelMove());
 }
 
 static inline void load_scene(void) {

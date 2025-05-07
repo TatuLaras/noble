@@ -32,6 +32,7 @@ static inline void update_matches(void) {
 
     StringVector *list = get_list();
 
+    asset_picker.search_query[asset_picker.search_query_used] = 0;
     asset_picker.matches_used = 0;
     char *candidate = 0;
     AssetHandle i = 0;
@@ -39,8 +40,7 @@ static inline void update_matches(void) {
            asset_picker.matches_used < ASSET_PICKER_MATCHES_MAX_COUNT) {
 
         // Not a match
-        if (strncmp(candidate, asset_picker.search_query,
-                    asset_picker.search_query_used))
+        if (!strstr(candidate, asset_picker.search_query))
             continue;
 
         asset_picker.matches[asset_picker.matches_used++] = i - 1;
@@ -142,7 +142,11 @@ char *asset_picker_get_newline_separated_matches(void) {
             newline_separated_matches[pos++] = name[j];
         newline_separated_matches[pos++] = '\n';
     }
-    newline_separated_matches[pos] = 0;
+
+    if (pos > 0)
+        newline_separated_matches[pos - 1] = 0;
+    else
+        newline_separated_matches[pos] = 0;
 
     newline_separated_matches_valid = 1;
     return newline_separated_matches;
