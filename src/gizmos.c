@@ -11,7 +11,7 @@ void gizmos_draw_grid(int slices, float spacing, Vector3 origin) {
 
     rlBegin(RL_LINES);
     for (int i = -halfSlices; i <= halfSlices; i++) {
-        rlColor3f(0.75f, 0.75f, 0.75f);
+        rlColor3f(0.5, 0.5, 0.5);
 
         rlVertex3f(origin.x + (float)i * spacing, origin.y,
                    origin.z - (float)halfSlices * spacing);
