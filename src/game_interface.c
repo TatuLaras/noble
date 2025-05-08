@@ -349,11 +349,13 @@ int game_init(char *scene_filepath) {
 
 void game_main(void) {
     while (!WindowShouldClose()) {
-        if (lighting_edit_state.is_light_selected &&
-            settings.lighting_edit_mode_enabled)
+
+        if (settings.lighting_edit_mode_enabled &&
+            lighting_edit_state.is_light_selected) {
             light_source_update(lighting_edit_state.current_group,
                                 lighting_edit_state.currently_selected_light,
-                                Vector3Zero());
+                                lighting_edit_transform_get_delta_vector());
+        }
 
         render();
         handle_inputs();

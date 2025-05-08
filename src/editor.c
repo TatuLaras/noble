@@ -252,15 +252,6 @@ void editor_transform_adjust(float amount, int slow_mode) {
 
     transform_operation.amount +=
         amount * TRANSFORM_BASE_SENSITIVITY * additional_multiplier;
-
-    if (settings.lighting_edit_mode_enabled &&
-        lighting_edit_state.is_light_selected) {
-        // If a transform is being performed we want to preview the effects of
-        // the lighting before committing, hence this.
-        light_source_update(lighting_edit_state.current_group,
-                            lighting_edit_state.currently_selected_light,
-                            lighting_edit_transform_get_delta_vector());
-    }
 }
 
 void editor_added_light_adjust(float amount, int slow_mode) {

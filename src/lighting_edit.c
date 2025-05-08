@@ -133,6 +133,9 @@ void lighting_edit_transform_apply(void) {
 }
 
 Vector3 lighting_edit_transform_get_delta_vector(void) {
+    if (transform_operation.mode == TRANSFORM_NONE)
+        return Vector3Zero();
+
     switch (transform_operation.axis) {
     case AXIS_X:
         return (Vector3){transform_operation.amount, 0, 0};

@@ -1,10 +1,17 @@
+USE_LOCAL_SYMLINK = no
 NAME = noble
 BUILD_DIR = build
 BUILD_DIR_TESTS = build/tests
 SRC_DIR = src
 SRC_DIR_TESTS = test
 UNITY_DIR = external/unity
+
+ifeq ($(USE_LOCAL_SYMLINK),no)
 EXTERNAL_INCLUDE = -Ilibebb/src -Iexternal/include
+else
+EXTERNAL_INCLUDE = -Ilnlibebb/src -Iexternal/include
+endif
+
 
 CC = gcc
 PACKAGES = $(shell pkg-config --libs raylib opengl) -lm
@@ -21,7 +28,11 @@ ARGS =
 
 # Build program
 
+ifeq ($(USE_LOCAL_SYMLINK),no)
 SRC = $(wildcard $(SRC_DIR)/*.c) $(wildcard libebb/src/*.c)
+else
+SRC = $(wildcard $(SRC_DIR)/*.c) $(wildcard lnlibebb/src/*.c)
+endif
 
 debug: $(BUILD_DIR) $(BUILD_DIR)/debug
 release: $(BUILD_DIR) $(BUILD_DIR)/release
