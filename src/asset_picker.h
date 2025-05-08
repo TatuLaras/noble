@@ -3,7 +3,6 @@
 
 // Logic for a searchable menu of available assets.
 
-#include "handles.h"
 #include <raylib.h>
 #include <stddef.h>
 #include <stdint.h>

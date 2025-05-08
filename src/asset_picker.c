@@ -94,7 +94,7 @@ void asset_picker_select_current_option(void) {
             settings.selected_asset[settings.current_asset_slot] = handle;
             break;
         case PICKER_MODE_SKYBOX:
-            scene_set_skybox(handle);
+            scene_set_skybox(handle, settings.skybox_directory);
             break;
         }
     }

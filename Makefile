@@ -4,12 +4,12 @@ BUILD_DIR_TESTS = build/tests
 SRC_DIR = src
 SRC_DIR_TESTS = test
 UNITY_DIR = external/unity
-EXTERNAL_INCLUDE = external/include
+EXTERNAL_INCLUDE = -Ilibebb/src -Iexternal/include
 
 CC = gcc
 PACKAGES = $(shell pkg-config --libs raylib opengl) -lm
 SANITIZE = -fsanitize=address
-CFLAGS = $(PACKAGES) -I$(EXTERNAL_INCLUDE) -Wall -Wextra -Wshadow -pedantic -Wstrict-prototypes -march=native
+CFLAGS = $(PACKAGES) $(EXTERNAL_INCLUDE) -Wall -Wextra -Wshadow -pedantic -Wstrict-prototypes -march=native
 CFLAGS_TEST = $(PACKAGES) -DTEST -I$(UNITY_DIR) -I$(SRC_DIR) -I$(EXTERNAL_INCLUDE) -ggdb $(SANITIZE) -std=c23
 
 CFLAGS_DEBUG = $(CFLAGS) -DDEBUG -ggdb
@@ -21,7 +21,7 @@ ARGS =
 
 # Build program
 
-SRC = $(wildcard $(SRC_DIR)/*.c)
+SRC = $(wildcard $(SRC_DIR)/*.c) $(wildcard libebb/src/*.c)
 
 debug: $(BUILD_DIR) $(BUILD_DIR)/debug
 release: $(BUILD_DIR) $(BUILD_DIR)/release

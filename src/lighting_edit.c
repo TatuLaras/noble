@@ -1,5 +1,4 @@
 #include "lighting_edit.h"
-#include "common.h"
 #include "lighting.h"
 #include "raycast.h"
 #include "raygui.h"
@@ -31,7 +30,7 @@ int lighting_edit_add_light(Ray ray) {
         .intensity_cap = 10.0,
     };
 
-    light.position = vector3_settings_quantize(light.position);
+    light.position = settings_quantize_to_grid(light.position, 0);
 
     if (!lighting_group_add_light(lighting_edit_state.current_group, light,
                                   &lighting_edit_state.currently_added_light)) {
@@ -52,7 +51,8 @@ void lighting_edit_selected_light_toggle_enabled(void) {
     light->is_disabled = !light->is_disabled;
 
     light_source_update(lighting_edit_state.current_group,
-                        lighting_edit_state.currently_selected_light);
+                        lighting_edit_state.currently_selected_light,
+                        Vector3Zero());
 }
 
 void lighting_edit_adding_light_update(float delta_y) {
@@ -65,7 +65,8 @@ void lighting_edit_adding_light_update(float delta_y) {
     light->position.y += delta_y;
 
     light_source_update(lighting_edit_state.current_group,
-                        lighting_edit_state.currently_added_light);
+                        lighting_edit_state.currently_added_light,
+                        Vector3Zero());
 }
 
 void lighting_edit_adding_stop(void) {

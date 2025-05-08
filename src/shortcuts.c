@@ -2,7 +2,6 @@
 #include "common.h"
 #include <raylib.h>
 #include <stddef.h>
-#include <stdio.h>
 
 typedef enum {
     MATCH_NONE,
@@ -66,11 +65,6 @@ static Shortcut shortcuts[] = {
     {
         .action = ACTION_TOGGLE_ADDING_RAYCAST_INCLUDE_OBJECTS,
         .keypresses = {KEY_I},
-    },
-    {
-        .action = ACTION_TOGGLE_SELECTED_ENTITY_LIGHTING,
-        .keypresses = {KEY_S},
-        .require_shift_down = 1,
     },
     {
         .action = ACTION_GRID_RESET,

@@ -40,13 +40,6 @@ static inline void start_transform(TransformMode mode, Axis axis) {
     DisableCursor();
 }
 
-static inline void toggle_selected_entity_lighting(void) {
-    Entity *selected_entity = selection_get_selected_entity();
-    if (!selected_entity)
-        return;
-    lighting_set_entity_unlit(selected_entity, !selected_entity->is_unlit);
-}
-
 static inline void pick_selected_entity_asset(void) {
     if (!entity_selection_state.is_entity_selected)
         return;
@@ -121,9 +114,6 @@ void editor_execute_action(ShortcutAction action, Camera *camera) {
     case ACTION_TOGGLE_LIGHTING:
         settings.lighting_enabled = !settings.lighting_enabled;
         lighting_scene_set_enabled(settings.lighting_enabled);
-        break;
-    case ACTION_TOGGLE_SELECTED_ENTITY_LIGHTING:
-        toggle_selected_entity_lighting();
         break;
     case ACTION_TOGGLE_DEBUG_INFO:
         settings.debug_info_enabled = !settings.debug_info_enabled;
@@ -228,7 +218,7 @@ void editor_execute_action(ShortcutAction action, Camera *camera) {
         Entity *entity = selection_get_selected_entity();
         if (!entity)
             break;
-        camera->target = transform_matrix_get_position(entity->transform);
+        camera->target = matrix_get_position(entity->transform);
     } break;
 
     case ACTION_NONE:
@@ -265,8 +255,11 @@ void editor_transform_adjust(float amount, int slow_mode) {
 
     if (settings.lighting_edit_mode_enabled &&
         lighting_edit_state.is_light_selected) {
+        // If a transform is being performed we want to preview the effects of
+        // the lighting before committing, hence this.
         light_source_update(lighting_edit_state.current_group,
-                            lighting_edit_state.currently_selected_light);
+                            lighting_edit_state.currently_selected_light,
+                            lighting_edit_transform_get_delta_vector());
     }
 }
 

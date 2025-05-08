@@ -1,6 +1,7 @@
 #include "transform.h"
 
 #include "common.h"
+#include "settings.h"
 #include <assert.h>
 #include <raymath.h>
 
@@ -35,22 +36,23 @@ Matrix transform_get_matrix(void) {
 
     switch (transform_operation.mode) {
     case TRANSFORM_TRANSLATE:
-        axis_transform = vector3_settings_quantize(axis_transform);
+        axis_transform = settings_quantize_to_grid(axis_transform, 0);
         return MatrixTranslate(axis_transform.x, axis_transform.y,
                                axis_transform.z);
     case TRANSFORM_ROTATE:
-        axis_transform =
-            vector3_quantize_custom(axis_transform, ROTATION_SNAP_INCREMENT);
+        if (settings.quantize_to_grid_enabled)
+            axis_transform = (Vector3){
+                quantize(axis_transform.x, ROTATION_SNAP_INCREMENT),
+                quantize(axis_transform.y, ROTATION_SNAP_INCREMENT),
+                quantize(axis_transform.z, ROTATION_SNAP_INCREMENT),
+            };
+
         return MatrixRotateXYZ(axis_transform);
     case TRANSFORM_NONE:
         return MatrixIdentity();
     }
 
     return MatrixIdentity();
-}
-
-Vector3 transform_matrix_get_position(Matrix transform) {
-    return (Vector3){transform.m12, transform.m13, transform.m14};
 }
 
 void transform_start(TransformMode mode, Axis axis, Entity *entity) {

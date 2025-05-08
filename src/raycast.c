@@ -1,6 +1,5 @@
 #include "raycast.h"
 
-#include "common.h"
 #include "scene.h"
 #include "settings.h"
 #include <raymath.h>
@@ -20,7 +19,7 @@ Matrix raycast_get_desired_model_transform(Ray ray) {
             targetted_position = result.point;
     }
 
-    targetted_position = vector3_settings_quantize(targetted_position);
+    targetted_position = settings_quantize_to_grid(targetted_position, 0);
 
     Matrix translation = MatrixTranslate(
         targetted_position.x, targetted_position.y, targetted_position.z);

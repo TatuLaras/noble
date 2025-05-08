@@ -15,7 +15,8 @@ int adding_asset_instantiate(Ray ray) {
         .asset_handle = settings.selected_asset[settings.current_asset_slot],
     };
 
-    if (scene_add(entity, &entity_adding_state.entity_handle))
+    if (scene_add(entity, &entity_adding_state.entity_handle,
+                  settings.asset_directory))
         return 1;
 
     return 0;

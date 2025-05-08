@@ -3,13 +3,13 @@
 #include "adding.h"
 #include "asset_picker.h"
 #include "assets.h"
-#include "common.h"
 #include "editor.h"
 #include "gizmos.h"
 #include "lighting.h"
 #include "lighting_edit.h"
 #include "model_vector.h"
 #include "orbital_controls.h"
+#include "properties_menu.h"
 #include "raymath.h"
 #include "rlgl.h"
 #include "scene.h"
@@ -93,10 +93,10 @@ static void render(void) {
     }
 
     if (settings.grid_enabled) {
-        Vector3 origin = vector3_quantize(camera.target);
+        Vector3 origin = settings_quantize_to_grid(camera.target, 1);
         gizmos_draw_grid(
             80 / settings.grid_density, settings.grid_density,
-            (Vector3){origin.x, settings.grid_height + 0.002, origin.z});
+            (Vector3){origin.x, settings.grid_height + 0.003, origin.z});
     }
 
     EndMode3D();
@@ -120,7 +120,7 @@ static void render(void) {
 
     if (settings.properties_menu_enabled) {
         lighting_edit_render_properties_menu();
-        scene_render_properties_menu();
+        properties_menu_render();
     }
 
     if (settings.debug_info_enabled)
@@ -235,6 +235,31 @@ static inline void handle_inputs(void) {
         return;
     }
 
+    // Object instantiation
+    if (mouse_button_pressed(MOUSE_BUTTON_LEFT)) {
+        Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
+        editor_instantiate_object(ray, lighting_group_handle);
+        return;
+    }
+
+    // Update added object while mouse down
+    if (mouse_button_down(MOUSE_BUTTON_LEFT)) {
+        float rotate_by_angle = scroll * ROTATION_SNAP_INCREMENT;
+        Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
+        adding_entity_update(ray, rotate_by_angle);
+        return;
+    }
+
+    // Stop updating added object
+    if (mouse_button_released(MOUSE_BUTTON_LEFT) &&
+        entity_adding_state.adding) {
+        adding_stop();
+        return;
+    }
+
+    // Scroll wheel not used for anything else, zoom
+    orbital_adjust_camera_zoom(&camera, GetMouseWheelMove());
+
     // Lighting edit
     if (settings.lighting_edit_mode_enabled) {
         if (mouse_button_pressed(MOUSE_BUTTON_RIGHT)) {
@@ -264,37 +289,12 @@ static inline void handle_inputs(void) {
         EnableCursor();
     }
 
-    // Object instantiation
-    if (mouse_button_pressed(MOUSE_BUTTON_LEFT)) {
-        Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
-        editor_instantiate_object(ray, lighting_group_handle);
-        return;
-    }
-
-    // Update added object while mouse down
-    if (mouse_button_down(MOUSE_BUTTON_LEFT)) {
-        float rotate_by_angle = scroll * ROTATION_SNAP_INCREMENT;
-        Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
-        adding_entity_update(ray, rotate_by_angle);
-        return;
-    }
-
-    // Stop updating added object
-    if (mouse_button_released(MOUSE_BUTTON_LEFT) &&
-        entity_adding_state.adding) {
-        adding_stop();
-        return;
-    }
-
     // Object seletion
     if (mouse_button_pressed(MOUSE_BUTTON_RIGHT)) {
         Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
         editor_mouse_select_object(ray);
         return;
     }
-
-    // Scroll wheel not used for anything else, zoom
-    orbital_adjust_camera_zoom(&camera, GetMouseWheelMove());
 }
 
 static inline void load_scene(void) {
@@ -303,7 +303,8 @@ static inline void load_scene(void) {
         perror("WARNING: Could not open scene file");
         return;
     }
-    if (scene_file_load(fp)) {
+    if (scene_file_load(fp, settings.skybox_directory,
+                        settings.asset_directory)) {
         printf("WARNING: Did not load scene from file, either it doesn't exist "
                "or is in the wrong format.\n");
     }
@@ -321,8 +322,14 @@ int game_init(char *scene_filepath) {
     scene_init();
     lighting_scene_init();
 
-    assets_fetch_all();
-    skyboxes_fetch_all();
+    strcpy(settings.asset_directory, settings.project_directory);
+    strcat(settings.asset_directory, "assets/");
+
+    strcpy(settings.skybox_directory, settings.project_directory);
+    strcat(settings.skybox_directory, "skyboxes/");
+
+    assets_fetch_all(settings.asset_directory);
+    skyboxes_fetch_all(settings.skybox_directory);
 
     lighting_group_handle =
         lighting_group_create((Color){0x21, 0x0d, 0x1f, 255});
@@ -336,7 +343,7 @@ int game_init(char *scene_filepath) {
     camera.fovy = 45.0f;
 
     load_scene();
-    scene_load_skybox();
+    scene_load_skybox(settings.skybox_directory);
     return 0;
 }
 
@@ -345,7 +352,8 @@ void game_main(void) {
         if (lighting_edit_state.is_light_selected &&
             settings.lighting_edit_mode_enabled)
             light_source_update(lighting_edit_state.current_group,
-                                lighting_edit_state.currently_selected_light);
+                                lighting_edit_state.currently_selected_light,
+                                Vector3Zero());
 
         render();
         handle_inputs();
