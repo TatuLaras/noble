@@ -6,6 +6,12 @@
 
 #define SETTINGS_ASSET_SLOTS_AVAILABLE 10
 
+typedef enum {
+    MODE_NORMAL,
+    MODE_LIGHTING,
+    MODE_TERRAIN,
+} Mode;
+
 typedef struct {
     int quantize_to_grid_enabled;
     float grid_density;
@@ -16,7 +22,7 @@ typedef struct {
     int properties_menu_enabled;
     int adding_raycast_include_objects;
     int lighting_enabled;
-    int lighting_edit_mode_enabled;
+    Mode mode;
     int debug_info_enabled;
     float gizmo_size;
     char project_directory[MAX_PATH_LENGTH];

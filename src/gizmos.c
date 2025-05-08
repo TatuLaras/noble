@@ -5,6 +5,7 @@
 #include "transform.h"
 #include <raylib.h>
 #include <raymath.h>
+#include <stdio.h>
 
 void gizmos_draw_grid(int slices, float spacing, Vector3 origin) {
     int halfSlices = slices / 2;
@@ -104,7 +105,7 @@ void gizmos_render_transform_gizmo(Matrix transform) {
     DrawSphere(z_axis, 0.05, BLUE);
 }
 
-void gizmos_render_light_gizmos(LightingGroupHandle handle, Camera3D camera) {
+void gizmos_render_light_gizmos(LightingGroupHandle handle, Camera camera) {
 
     LightSourceHandle i = 0;
     LightSource *light = 0;
@@ -117,27 +118,17 @@ void gizmos_render_light_gizmos(LightingGroupHandle handle, Camera3D camera) {
 
         // Light transform gizmo
         if (is_selected && transform_operation.mode == TRANSFORM_TRANSLATE) {
-            BeginMode3D(camera);
             switch (transform_operation.axis) {
             case AXIS_X:
                 light_3d_pos.x += transform_operation.amount;
-                DrawLine3D((Vector3){-100, light_3d_pos.y, light_3d_pos.z},
-                           (Vector3){100, light_3d_pos.y, light_3d_pos.z}, RED);
                 break;
             case AXIS_Y:
                 light_3d_pos.y += transform_operation.amount;
-                DrawLine3D((Vector3){light_3d_pos.x, -100, light_3d_pos.z},
-                           (Vector3){light_3d_pos.x, 100, light_3d_pos.z},
-                           GREEN);
                 break;
             case AXIS_Z:
                 light_3d_pos.z += transform_operation.amount;
-                DrawLine3D((Vector3){light_3d_pos.x, light_3d_pos.y, -100},
-                           (Vector3){light_3d_pos.x, light_3d_pos.y, 100},
-                           BLUE);
                 break;
             }
-            EndMode3D();
         }
 
         Vector2 light_pos = GetWorldToScreen(light_3d_pos, camera);

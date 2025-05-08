@@ -23,7 +23,7 @@
 #define FPV_PLAYER_HEIGHT 1.5
 
 static inline void start_transform(TransformMode mode, Axis axis) {
-    if (settings.lighting_edit_mode_enabled) {
+    if (settings.mode == MODE_LIGHTING) {
         if (mode == TRANSFORM_TRANSLATE &&
             lighting_edit_state.is_light_selected) {
             lighting_edit_transform_start(axis);
@@ -52,13 +52,16 @@ static inline void pick_selected_entity_asset(void) {
 static inline void focus_selected(Camera *camera) {
     Vector3 focus_point = Vector3Zero();
 
-    if (settings.lighting_edit_mode_enabled &&
+    if (settings.mode == MODE_LIGHTING &&
         lighting_edit_state.is_light_selected) {
+
         LightSource *light = lighting_group_get_light(
             lighting_edit_state.current_group,
             lighting_edit_state.currently_selected_light);
+
         if (light)
             focus_point = light->position;
+
     } else {
         Entity *entity = selection_get_selected_entity();
         if (entity)
@@ -71,7 +74,7 @@ static inline void focus_selected(Camera *camera) {
 
 // In light edit mode this toggles the enabled status of the light.
 static inline void delete_selected_object(void) {
-    if (settings.lighting_edit_mode_enabled) {
+    if (settings.mode == MODE_LIGHTING) {
         lighting_edit_selected_light_toggle_enabled();
     } else if (entity_selection_state.is_entity_selected) {
         scene_remove(entity_selection_state.handle);
@@ -85,7 +88,7 @@ static inline void set_asset_slot(uint8_t slot) {
 }
 
 void editor_stop_transform(void) {
-    if (settings.lighting_edit_mode_enabled) {
+    if (settings.mode == MODE_LIGHTING) {
         lighting_edit_transform_stop();
         EnableCursor();
         return;
@@ -98,7 +101,7 @@ void editor_stop_transform(void) {
 }
 
 void editor_cancel_transform(void) {
-    if (settings.lighting_edit_mode_enabled) {
+    if (settings.mode == MODE_LIGHTING) {
         lighting_edit_transform_cancel();
     } else
         transform_cancel();
@@ -128,8 +131,10 @@ void editor_execute_action(ShortcutAction action, Camera *camera) {
         if (transform_operation.mode != TRANSFORM_NONE)
             editor_cancel_transform();
 
-        settings.lighting_edit_mode_enabled =
-            !settings.lighting_edit_mode_enabled;
+        if (settings.mode != MODE_LIGHTING)
+            settings.mode = MODE_LIGHTING;
+        else
+            settings.mode = MODE_NORMAL;
         break;
     case ACTION_TOGGLE_LIGHTING:
         settings.lighting_enabled = !settings.lighting_enabled;
@@ -306,11 +311,10 @@ void editor_adjust_gizmo_size(float amount) {
 
 void editor_set_fpv_controls_enabled(Camera *camera, int enabled) {
     settings.fps_controls_enabled = enabled;
-    camera->position.y = settings.grid_height + FPV_PLAYER_HEIGHT;
-    camera->target.y = settings.grid_height + FPV_PLAYER_HEIGHT;
 
-    if (enabled)
+    if (enabled) {
+        camera->position.y = settings.grid_height + FPV_PLAYER_HEIGHT;
         DisableCursor();
-    else
+    } else
         EnableCursor();
 }

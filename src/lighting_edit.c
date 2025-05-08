@@ -164,8 +164,7 @@ static inline void slider_input(const char *label, float *property, float min,
 }
 
 void lighting_edit_render_properties_menu(void) {
-    if (!lighting_edit_state.is_light_selected ||
-        !settings.lighting_edit_mode_enabled)
+    if (!lighting_edit_state.is_light_selected || settings.mode == MODE_NORMAL)
         return;
 
     LightSource *light =

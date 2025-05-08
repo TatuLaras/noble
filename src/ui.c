@@ -35,7 +35,7 @@ static inline void render_status_bar(Rectangle rect) {
     char status_string[256] = {0};
 
     char *asset = "LIGHTING EDIT";
-    if (!settings.lighting_edit_mode_enabled)
+    if (settings.mode == MODE_NORMAL)
         asset = assets_get_name(
             settings.selected_asset[settings.current_asset_slot]);
     assert(asset);

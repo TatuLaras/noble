@@ -47,7 +47,7 @@ static void render(void) {
     BeginTextureMode(scene_render_target);
     ClearBackground((Color){0});
 
-    if (settings.lighting_edit_mode_enabled) {
+    if (settings.mode == MODE_LIGHTING) {
         LightingGroup *group =
             lighting_scene_get_group(lighting_edit_state.current_group);
         assert(group);
@@ -74,7 +74,7 @@ static void render(void) {
                            entity_selection_state.handle == i - 1);
         int is_current_entity_being_transformed =
             is_selected && transform_operation.mode != TRANSFORM_NONE &&
-            !settings.lighting_edit_mode_enabled;
+            settings.mode == MODE_NORMAL;
 
         if (is_current_entity_being_transformed) {
             Matrix preview_transform = transform_get_matrix();
@@ -87,7 +87,7 @@ static void render(void) {
         int is_being_added = entity_adding_state.adding &&
                              entity_adding_state.entity_handle == i - 1;
 
-        if (settings.gizmos_enabled && !settings.lighting_edit_mode_enabled &&
+        if (settings.gizmos_enabled && settings.mode == MODE_NORMAL &&
             (is_selected || is_being_added))
             gizmos_render_transform_gizmo(transform);
     }
@@ -115,7 +115,7 @@ static void render(void) {
                                (float)-scene_render_target.texture.height},
                    (Vector2){0, 0}, WHITE);
 
-    if (settings.lighting_edit_mode_enabled && settings.gizmos_enabled)
+    if (settings.mode == MODE_LIGHTING && settings.gizmos_enabled)
         gizmos_render_light_gizmos(lighting_group_handle, camera);
 
     if (settings.properties_menu_enabled) {
@@ -236,7 +236,7 @@ static inline void handle_inputs(void) {
     }
 
     // Lighting edit
-    if (settings.lighting_edit_mode_enabled) {
+    if (settings.mode == MODE_LIGHTING) {
         if (mouse_button_pressed(MOUSE_BUTTON_RIGHT)) {
             lighting_edit_select_light_at(GetMousePosition(), camera);
         }
@@ -350,7 +350,7 @@ int game_init(char *scene_filepath) {
 void game_main(void) {
     while (!WindowShouldClose()) {
 
-        if (settings.lighting_edit_mode_enabled &&
+        if (settings.mode == MODE_LIGHTING &&
             lighting_edit_state.is_light_selected) {
             light_source_update(lighting_edit_state.current_group,
                                 lighting_edit_state.currently_selected_light,
