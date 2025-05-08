@@ -5,6 +5,7 @@
 #include "handles.h"
 
 #define SETTINGS_ASSET_SLOTS_AVAILABLE 10
+
 typedef struct {
     int quantize_to_grid_enabled;
     float grid_density;

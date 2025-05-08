@@ -235,31 +235,6 @@ static inline void handle_inputs(void) {
         return;
     }
 
-    // Object instantiation
-    if (mouse_button_pressed(MOUSE_BUTTON_LEFT)) {
-        Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
-        editor_instantiate_object(ray, lighting_group_handle);
-        return;
-    }
-
-    // Update added object while mouse down
-    if (mouse_button_down(MOUSE_BUTTON_LEFT)) {
-        float rotate_by_angle = scroll * ROTATION_SNAP_INCREMENT;
-        Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
-        adding_entity_update(ray, rotate_by_angle);
-        return;
-    }
-
-    // Stop updating added object
-    if (mouse_button_released(MOUSE_BUTTON_LEFT) &&
-        entity_adding_state.adding) {
-        adding_stop();
-        return;
-    }
-
-    // Scroll wheel not used for anything else, zoom
-    orbital_adjust_camera_zoom(&camera, GetMouseWheelMove());
-
     // Lighting edit
     if (settings.lighting_edit_mode_enabled) {
         if (mouse_button_pressed(MOUSE_BUTTON_RIGHT)) {
@@ -283,10 +258,33 @@ static inline void handle_inputs(void) {
             EnableCursor();
         }
 
+        orbital_adjust_camera_zoom(&camera, GetMouseWheelMove());
         return;
     } else if (lighting_edit_state.is_light_added) {
         lighting_edit_adding_stop();
         EnableCursor();
+    }
+
+    // Object instantiation
+    if (mouse_button_pressed(MOUSE_BUTTON_LEFT)) {
+        Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
+        editor_instantiate_object(ray, lighting_group_handle);
+        return;
+    }
+
+    // Update added object while mouse down
+    if (mouse_button_down(MOUSE_BUTTON_LEFT)) {
+        float rotate_by_angle = scroll * ROTATION_SNAP_INCREMENT;
+        Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
+        adding_entity_update(ray, rotate_by_angle);
+        return;
+    }
+
+    // Stop updating added object
+    if (mouse_button_released(MOUSE_BUTTON_LEFT) &&
+        entity_adding_state.adding) {
+        adding_stop();
+        return;
     }
 
     // Object seletion
@@ -295,6 +293,8 @@ static inline void handle_inputs(void) {
         editor_mouse_select_object(ray);
         return;
     }
+
+    orbital_adjust_camera_zoom(&camera, GetMouseWheelMove());
 }
 
 static inline void load_scene(void) {

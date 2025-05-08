@@ -49,6 +49,26 @@ static inline void pick_selected_entity_asset(void) {
     settings.selected_asset[settings.current_asset_slot] = entity->asset_handle;
 }
 
+static inline void focus_selected(Camera *camera) {
+    Vector3 focus_point = Vector3Zero();
+
+    if (settings.lighting_edit_mode_enabled &&
+        lighting_edit_state.is_light_selected) {
+        LightSource *light = lighting_group_get_light(
+            lighting_edit_state.current_group,
+            lighting_edit_state.currently_selected_light);
+        if (light)
+            focus_point = light->position;
+    } else {
+        Entity *entity = selection_get_selected_entity();
+        if (entity)
+            focus_point = matrix_get_position(entity->transform);
+    }
+
+    camera->target = focus_point;
+    camera->position = Vector3Add(focus_point, (Vector3){0.0, 2.0, 2.0});
+}
+
 // In light edit mode this toggles the enabled status of the light.
 static inline void delete_selected_object(void) {
     if (settings.lighting_edit_mode_enabled) {
@@ -215,10 +235,7 @@ void editor_execute_action(ShortcutAction action, Camera *camera) {
         camera->target = (Vector3){0.0f, 0.0f, 0.0f};
         break;
     case ACTION_CAMERA_FOCUS_SELECTED: {
-        Entity *entity = selection_get_selected_entity();
-        if (!entity)
-            break;
-        camera->target = matrix_get_position(entity->transform);
+        focus_selected(camera);
     } break;
 
     case ACTION_NONE:
