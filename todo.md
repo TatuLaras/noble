@@ -1,3 +1,0 @@
-- Directional light
-- Hot reloading
-- Text based editable scene format?
