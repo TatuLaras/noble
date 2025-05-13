@@ -5,6 +5,7 @@
 #include "handles.h"
 
 #define SETTINGS_ASSET_SLOTS_AVAILABLE 10
+#define SETTINGS_DEFAULT_GRID_DENSITY 2.0
 
 typedef enum {
     MODE_NORMAL,

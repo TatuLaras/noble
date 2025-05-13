@@ -7,6 +7,7 @@
 #include "gizmos.h"
 #include "lighting.h"
 #include "lighting_edit.h"
+#include "model_files.h"
 #include "model_vector.h"
 #include "orbital_controls.h"
 #include "properties_menu.h"
@@ -18,6 +19,8 @@
 #include "settings.h"
 #include "shortcuts.h"
 #include "skyboxes.h"
+#include "terrain.h"
+#include "terrain_edit.h"
 #include "transform.h"
 #include "ui.h"
 #include <assert.h>
@@ -30,10 +33,17 @@
 
 #define VERTICAL_MOVEMENT_SPEED 3.0
 
-static LightingGroupHandle lighting_group_handle;
-
 static Camera3D camera = {0};
 static RenderTexture scene_render_target = {0};
+
+static Mesh terrain_mesh = {0};
+static Material lighting_group_material = {0};
+
+static inline void generate_terrain_mesh(void) {
+    if (terrain_mesh.vaoId)
+        UnloadMesh(terrain_mesh);
+    terrain_mesh = terrain_generate_mesh();
+}
 
 static void render(void) {
     if (!scene_render_target.id || IsWindowResized()) {
@@ -81,8 +91,14 @@ static void render(void) {
             transform = MatrixMultiply(preview_transform, entity->transform);
         }
 
+        if (settings.mode == MODE_TERRAIN)
+            rlEnableWireMode();
+
         DrawMesh(model_data->model.meshes[0], model_data->model.materials[0],
                  transform);
+
+        if (settings.mode == MODE_TERRAIN)
+            rlDisableWireMode();
 
         int is_being_added = entity_adding_state.adding &&
                              entity_adding_state.entity_handle == i - 1;
@@ -99,6 +115,9 @@ static void render(void) {
             (Vector3){origin.x, settings.grid_height + 0.003, origin.z});
     }
 
+    // Terrain mesh
+    DrawMesh(terrain_mesh, lighting_group_material,
+             MatrixTranslate(0, -0.02, 0));
     EndMode3D();
     EndTextureMode();
 
@@ -115,12 +134,29 @@ static void render(void) {
                                (float)-scene_render_target.texture.height},
                    (Vector2){0, 0}, WHITE);
 
-    if (settings.mode == MODE_LIGHTING && settings.gizmos_enabled)
-        gizmos_render_light_gizmos(lighting_group_handle, camera);
+    if (settings.gizmos_enabled) {
+        switch (settings.mode) {
+        case MODE_NORMAL:
+            break;
+        case MODE_LIGHTING:
+            gizmos_render_light_gizmos(lighting_edit_state.current_group,
+                                       &camera);
+            break;
+        case MODE_TERRAIN:
+            gizmos_render_terrain_gizmos();
+            break;
+        }
+    }
 
     if (settings.properties_menu_enabled) {
-        lighting_edit_render_properties_menu();
-        properties_menu_render();
+        PropertiesMenuEvent event = properties_menu_render();
+        switch (event) {
+        case PROPERTIES_EVENT_NONE:
+            break;
+        case PROPERTIES_EVENT_TERRAIN_RESIZE:
+            generate_terrain_mesh();
+            break;
+        }
     }
 
     if (settings.debug_info_enabled)
@@ -144,15 +180,127 @@ static inline int mouse_inside_properties_menu(void) {
 static inline int mouse_button_pressed(MouseButton button) {
     return IsMouseButtonPressed(button) && !mouse_inside_properties_menu();
 }
+
 static inline int mouse_button_down(MouseButton button) {
     return IsMouseButtonDown(button) && !mouse_inside_properties_menu();
 }
+
 static inline int mouse_button_released(MouseButton button) {
     return IsMouseButtonReleased(button) && !mouse_inside_properties_menu();
 }
 
-static inline void handle_inputs(void) {
+// Adjust grid with c + scrollwheel, returns 1 if grid was adjusted.
+static inline int grid_adjust(void) {
+    if (IsKeyDown(KEY_C)) {
+        if (IsKeyDown(KEY_LEFT_SHIFT))
+            editor_adjust_grid_height(GetMouseWheelMove());
+        else
+            editor_adjust_grid_density(GetMouseWheelMove());
+        return 1;
+    }
+    return 0;
+}
 
+static inline void handle_inputs_normal(void) {
+    float scroll = GetMouseWheelMove();
+
+    if (IsKeyDown(KEY_V)) {
+        editor_adjust_gizmo_size(scroll);
+        return;
+    }
+
+    // Object instantiation
+    if (mouse_button_pressed(MOUSE_BUTTON_LEFT)) {
+        Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
+        editor_instantiate_object(ray, lighting_edit_state.current_group);
+        return;
+    }
+
+    // Update added object while mouse down
+    if (mouse_button_down(MOUSE_BUTTON_LEFT)) {
+        float rotate_by_angle = scroll * ROTATION_SNAP_INCREMENT;
+        Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
+        adding_entity_update(ray, rotate_by_angle);
+        return;
+    }
+
+    // Scroll not used for anything else
+    orbital_adjust_camera_zoom(&camera, scroll);
+
+    // Stop updating added object
+    if (mouse_button_released(MOUSE_BUTTON_LEFT) &&
+        entity_adding_state.adding) {
+        adding_stop();
+        return;
+    }
+
+    // Object seletion
+    if (mouse_button_pressed(MOUSE_BUTTON_RIGHT)) {
+        Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
+        editor_mouse_select_object(ray);
+        return;
+    }
+}
+
+static inline void handle_inputs_lighting(void) {
+
+    if (mouse_button_pressed(MOUSE_BUTTON_RIGHT)) {
+        lighting_edit_select_light_at(GetMousePosition(), camera);
+        return;
+    }
+
+    if (mouse_button_pressed(MOUSE_BUTTON_LEFT)) {
+        Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
+        lighting_edit_add_light(ray);
+        DisableCursor();
+        return;
+    }
+
+    if (mouse_button_down(MOUSE_BUTTON_LEFT) &&
+        lighting_edit_state.is_light_added) {
+        editor_added_light_adjust(GetMouseDelta().x, IsKeyDown(KEY_LEFT_SHIFT));
+        return;
+    }
+
+    if (mouse_button_released(MOUSE_BUTTON_LEFT) &&
+        lighting_edit_state.is_light_added) {
+        lighting_edit_adding_stop();
+        EnableCursor();
+        return;
+    }
+
+    orbital_adjust_camera_zoom(&camera, GetMouseWheelMove());
+}
+
+static inline void handle_inputs_terrain(void) {
+    if (IsKeyDown(KEY_LEFT_ALT)) {
+        terrain_edit_adjust_tool_radius(GetMouseWheelMove());
+        return;
+    }
+
+    if (mouse_button_down(MOUSE_BUTTON_LEFT)) {
+        if (terrain_edit_use_tool(GetMousePosition(), camera, 0))
+            generate_terrain_mesh();
+        return;
+    }
+    if (mouse_button_down(MOUSE_BUTTON_RIGHT)) {
+        if (terrain_edit_use_tool(GetMousePosition(), camera, 1))
+            generate_terrain_mesh();
+
+        return;
+    }
+
+    if (mouse_button_released(MOUSE_BUTTON_LEFT) ||
+        mouse_button_released(MOUSE_BUTTON_RIGHT)) {
+        terrain_edit_finish_brush_stroke();
+        generate_terrain_mesh();
+        return;
+    }
+
+    orbital_adjust_camera_zoom(&camera, GetMouseWheelMove());
+}
+
+static inline void handle_inputs(void) {
     // Asset picker UI captures all inputs when active
     if (asset_picker.picking_asset) {
         // Select asset
@@ -166,17 +314,10 @@ static inline void handle_inputs(void) {
         return;
     }
 
-    Vector2 mouse_delta = GetMouseDelta();
-    float scroll = GetMouseWheelMove();
-
-    // FPS style movement
-    //  TODO: some easier controls as well as an option
-
-    // Orbit controls
-
     if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE))
         DisableCursor();
-    if (IsMouseButtonReleased(MOUSE_BUTTON_MIDDLE))
+    if (IsMouseButtonReleased(MOUSE_BUTTON_MIDDLE) &&
+        transform_operation.mode == TRANSFORM_NONE)
         EnableCursor();
 
     if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE)) {
@@ -188,7 +329,7 @@ static inline void handle_inputs(void) {
         if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_CAPS_LOCK) ||
             IsMouseButtonPressed(MOUSE_BUTTON_LEFT) ||
             IsMouseButtonPressed(MOUSE_BUTTON_RIGHT))
-            editor_set_fpv_controls_enabled(&camera, 0);
+            editor_set_fpv_controls_enabled(camera, 0);
 
         float delta_time = GetFrameTime();
         float vertical_movement = 0;
@@ -211,90 +352,30 @@ static inline void handle_inputs(void) {
         IsKeyDown(KEY_LEFT_ALT));
     editor_execute_action(action, &camera);
 
-    if (IsKeyDown(KEY_V)) {
-        editor_adjust_gizmo_size(scroll);
+    if (grid_adjust())
         return;
-    }
-
-    if (IsKeyDown(KEY_C)) {
-        if (IsKeyDown(KEY_LEFT_SHIFT))
-            editor_adjust_grid_height(scroll);
-        else
-            editor_adjust_grid_density(scroll);
-        return;
-    }
 
     if (transform_operation.mode != TRANSFORM_NONE) {
-
         if (mouse_button_pressed(MOUSE_BUTTON_LEFT))
             editor_stop_transform();
         if (mouse_button_pressed(MOUSE_BUTTON_RIGHT))
             editor_cancel_transform();
 
-        editor_transform_adjust(mouse_delta.x, IsKeyDown(KEY_LEFT_SHIFT));
+        editor_transform_adjust(GetMouseDelta().x, IsKeyDown(KEY_LEFT_SHIFT));
         return;
     }
 
-    // Lighting edit
-    if (settings.mode == MODE_LIGHTING) {
-        if (mouse_button_pressed(MOUSE_BUTTON_RIGHT)) {
-            lighting_edit_select_light_at(GetMousePosition(), camera);
-        }
-
-        if (mouse_button_pressed(MOUSE_BUTTON_LEFT)) {
-            Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
-            lighting_edit_add_light(ray);
-            DisableCursor();
-        }
-
-        if (mouse_button_down(MOUSE_BUTTON_LEFT) &&
-            lighting_edit_state.is_light_added) {
-            editor_added_light_adjust(mouse_delta.x, IsKeyDown(KEY_LEFT_SHIFT));
-        }
-
-        if (mouse_button_released(MOUSE_BUTTON_LEFT) &&
-            lighting_edit_state.is_light_added) {
-            lighting_edit_adding_stop();
-            EnableCursor();
-        }
-
-        orbital_adjust_camera_zoom(&camera, GetMouseWheelMove());
-        return;
-    } else if (lighting_edit_state.is_light_added) {
-        lighting_edit_adding_stop();
-        EnableCursor();
+    switch (settings.mode) {
+    case MODE_NORMAL:
+        handle_inputs_normal();
+        break;
+    case MODE_LIGHTING:
+        handle_inputs_lighting();
+        break;
+    case MODE_TERRAIN:
+        handle_inputs_terrain();
+        break;
     }
-
-    // Object instantiation
-    if (mouse_button_pressed(MOUSE_BUTTON_LEFT)) {
-        Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
-        editor_instantiate_object(ray, lighting_group_handle);
-        return;
-    }
-
-    // Update added object while mouse down
-    if (mouse_button_down(MOUSE_BUTTON_LEFT)) {
-        float rotate_by_angle = scroll * ROTATION_SNAP_INCREMENT;
-        Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
-        adding_entity_update(ray, rotate_by_angle);
-        return;
-    }
-
-    // Stop updating added object
-    if (mouse_button_released(MOUSE_BUTTON_LEFT) &&
-        entity_adding_state.adding) {
-        adding_stop();
-        return;
-    }
-
-    // Object seletion
-    if (mouse_button_pressed(MOUSE_BUTTON_RIGHT)) {
-        Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
-        editor_mouse_select_object(ray);
-        return;
-    }
-
-    orbital_adjust_camera_zoom(&camera, GetMouseWheelMove());
 }
 
 static inline void load_scene(void) {
@@ -331,9 +412,14 @@ int game_init(char *scene_filepath) {
     assets_fetch_all(settings.asset_directory);
     skyboxes_fetch_all(settings.skybox_directory);
 
-    lighting_group_handle =
+    lighting_edit_state.current_group =
         lighting_group_create((Color){0x21, 0x0d, 0x1f, 255});
-    lighting_edit_state.current_group = lighting_group_handle;
+
+    lighting_group_material = LoadMaterialDefault();
+    lighting_group_material.maps[MATERIAL_MAP_DIFFUSE].texture =
+        load_aseprite_texture("test_terrain.aseprite");
+    lighting_group_add_material(lighting_edit_state.current_group,
+                                &lighting_group_material);
 
     lighting_scene_set_enabled(settings.lighting_enabled);
 
@@ -342,8 +428,10 @@ int game_init(char *scene_filepath) {
     camera.up = (Vector3){0.0f, 1.0f, 0.0f};
     camera.fovy = 45.0f;
 
+    terrain_init(60);
     load_scene();
     scene_load_skybox(settings.skybox_directory);
+    generate_terrain_mesh();
     return 0;
 }
 

@@ -3,7 +3,7 @@
 
 Settings settings = {
     .quantize_to_grid_enabled = 1,
-    .grid_density = 2.0,
+    .grid_density = SETTINGS_DEFAULT_GRID_DENSITY,
     .grid_enabled = 1,
     .gizmos_enabled = 1,
     .properties_menu_enabled = 0,
@@ -14,11 +14,13 @@ Settings settings = {
 };
 
 Vector3 settings_quantize_to_grid(Vector3 vec, int ignore_enabled) {
+    float interval = settings.grid_density;
+
     if (settings.quantize_to_grid_enabled || ignore_enabled)
         return (Vector3){
-            .x = quantize(vec.x, settings.grid_density),
-            .y = quantize(vec.y, settings.grid_density),
-            .z = quantize(vec.z, settings.grid_density),
+            .x = quantize(vec.x, interval),
+            .y = quantize(vec.y, interval),
+            .z = quantize(vec.z, interval),
         };
 
     return vec;

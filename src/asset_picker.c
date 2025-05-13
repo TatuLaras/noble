@@ -26,6 +26,7 @@ static inline StringVector *get_list(void) {
     }
     return 0;
 }
+
 static inline void update_matches(void) {
     newline_separated_matches_valid = 0;
     asset_picker.selected_match = 0;

@@ -24,7 +24,7 @@ static inline void deselect_lights(void) {
 int lighting_edit_add_light(Ray ray) {
     LightSource light = {
         .type = LIGHT_POINT,
-        .position = raycast_ground_intersection(ray),
+        .position = raycast_ground_intersection(ray, settings.grid_height),
         .color = (Color){0xff, 0xcc, 0x99, 0xff},
         .intensity = 6.0,
         .intensity_cap = 10.0,
@@ -145,57 +145,4 @@ Vector3 lighting_edit_transform_get_delta_vector(void) {
         return (Vector3){0, 0, transform_operation.amount};
     }
     return Vector3Zero();
-}
-
-static inline void slider_input(const char *label, float *property, float min,
-                                float max, uint16_t height) {
-    Rectangle slider_rect = ui_properties_menu_reserve_height(height);
-    Rectangle label_rect = slider_rect;
-    label_rect.height = 20;
-    label_rect.x += 2;
-    label_rect.width -= 4;
-    slider_rect.height = 20;
-    slider_rect.y += 20;
-    slider_rect.x += 2;
-    slider_rect.width -= 6;
-
-    GuiLabel(label_rect, label);
-    GuiSlider(slider_rect, 0, 0, property, min, max);
-}
-
-void lighting_edit_render_properties_menu(void) {
-    if (!lighting_edit_state.is_light_selected || settings.mode == MODE_NORMAL)
-        return;
-
-    LightSource *light =
-        lighting_group_get_light(lighting_edit_state.current_group,
-                                 lighting_edit_state.currently_selected_light);
-    if (!light)
-        return;
-
-    uint16_t title_height = 20;
-    uint16_t picker_height = 120;
-    uint16_t spacing_height = 0;
-    uint16_t slider_height = 40;
-
-    Rectangle title_rect = ui_properties_menu_reserve_height(title_height);
-    GuiLabel(title_rect, "Light");
-
-    // Color picker
-    Rectangle color_picker_rect =
-        ui_properties_menu_reserve_height(picker_height);
-    color_picker_rect.width -= 32;
-    color_picker_rect.x += 2;
-    color_picker_rect.y += 4;
-    GuiColorPicker(color_picker_rect, 0, &light->color);
-
-    ui_properties_menu_reserve_height(spacing_height);
-
-    slider_input("Intensity", &light->intensity, 0.0, 30.0, slider_height);
-    slider_input("Intensity granular", &light->intensity_granular, 0.0, 2.0,
-                 slider_height);
-    slider_input("Intensity cap", &light->intensity_cap, 0.0, 10.0,
-                 slider_height);
-
-    ui_properties_menu_reserve_section_end();
 }

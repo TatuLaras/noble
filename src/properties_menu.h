@@ -1,6 +1,11 @@
 #ifndef _PROPERTIES_MENU
 #define _PROPERTIES_MENU
 
-void properties_menu_render(void);
+typedef enum {
+    PROPERTIES_EVENT_NONE,
+    PROPERTIES_EVENT_TERRAIN_RESIZE,
+} PropertiesMenuEvent;
+
+PropertiesMenuEvent properties_menu_render(void);
 
 #endif

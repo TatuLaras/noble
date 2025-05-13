@@ -11,9 +11,8 @@ typedef struct {
     Vector3 point;
 } ObjectRaycastResult;
 
-// Intersection of `ray` with the ground plane (depending on grid height, see
-// settings.h).
-Vector3 raycast_ground_intersection(Ray ray);
+// Intersection of `ray` with the ground plane.
+Vector3 raycast_ground_intersection(Ray ray, float ground_height);
 // Gets a transform matrix from the `ray` s intersection with the ground plane
 // that can be used with model placement into the scene.
 Matrix raycast_get_desired_model_transform(Ray ray);

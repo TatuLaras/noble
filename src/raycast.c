@@ -5,17 +5,20 @@
 #include <raymath.h>
 #include <stddef.h>
 
-Vector3 raycast_ground_intersection(Ray ray) {
-    float t = (settings.grid_height - ray.position.y) / ray.direction.y;
+Vector3 raycast_ground_intersection(Ray ray, float ground_height) {
+    float t = (ground_height - ray.position.y) / ray.direction.y;
     return Vector3Add(ray.position, Vector3Scale(ray.direction, t));
 }
 
 Matrix raycast_get_desired_model_transform(Ray ray) {
-    Vector3 targetted_position = raycast_ground_intersection(ray);
+    Vector3 targetted_position =
+        raycast_ground_intersection(ray, settings.grid_height);
 
     if (settings.adding_raycast_include_objects) {
         ObjectRaycastResult result = raycast_scene_objects(ray);
-        if (result.hit_something)
+        if (result.hit_something &&
+            (Vector3DistanceSqr(ray.position, result.point) <
+             Vector3DistanceSqr(ray.position, targetted_position)))
             targetted_position = result.point;
     }
 

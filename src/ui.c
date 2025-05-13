@@ -4,6 +4,8 @@
 #include "assets.h"
 #include "common.h"
 #include "settings.h"
+#include "shortcuts.h"
+#include "terrain_edit.h"
 #include <assert.h>
 #include <raylib.h>
 #include <stdint.h>
@@ -34,11 +36,34 @@ static uint16_t properties_menu_height = 0;
 static inline void render_status_bar(Rectangle rect) {
     char status_string[256] = {0};
 
-    char *asset = "LIGHTING EDIT";
-    if (settings.mode == MODE_NORMAL)
-        asset = assets_get_name(
+    int item_number = 0;
+    char *item_name = "";
+    char *mode = "LIGHTING";
+
+    if (settings.mode == MODE_NORMAL) {
+        mode = "NORMAL";
+        item_name = assets_get_name(
             settings.selected_asset[settings.current_asset_slot]);
-    assert(asset);
+        item_number = settings.current_asset_slot + 1;
+    }
+
+    if (settings.mode == MODE_TERRAIN) {
+        mode = "TERRAIN";
+        switch (terrain_edit_state.tool) {
+        case TERRAIN_TOOL_RAISE:
+            item_name = "raise";
+            item_number = 1;
+            break;
+        case TERRAIN_TOOL_RAISE_SMOOTH:
+            item_name = "raise smooth";
+            item_number = 2;
+            break;
+        case TERRAIN_TOOL_SET:
+            item_name = "set";
+            item_number = 3;
+            break;
+        }
+    }
 
     char *gizmos = "";
     if (settings.gizmos_enabled)
@@ -61,11 +86,12 @@ static inline void render_status_bar(Rectangle rect) {
         lighting = "shading";
 
     snprintf(status_string, ARRAY_LENGTH(status_string) - 1,
-             "%u  %s  |  o [%s]  p [%s]  q [%s]  i [%s]  s [%s]",
-             settings.current_asset_slot + 1, asset, gizmos, grid, snap,
-             object_ignore, lighting);
+             "%s  %u %s  |  o [%s]  p [%s]  q [%s]  i [%s]  s [%s]", mode,
+             item_number, item_name, gizmos, grid, snap, object_ignore,
+             lighting);
 
-    GuiStatusBar(rect, status_string);
+    if (!shortcuts_waiting_for_keypress())
+        GuiStatusBar(rect, status_string);
 }
 
 void ui_init(void) {

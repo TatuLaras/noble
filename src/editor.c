@@ -9,6 +9,8 @@
 #include "scene_file.h"
 #include "selection.h"
 #include "settings.h"
+#include "shortcuts.h"
+#include "terrain_edit.h"
 #include "transform.h"
 #include <assert.h>
 #include <raylib.h>
@@ -51,21 +53,28 @@ static inline void pick_selected_entity_asset(void) {
 
 static inline void focus_selected(Camera *camera) {
     Vector3 focus_point = Vector3Zero();
-
-    if (settings.mode == MODE_LIGHTING &&
-        lighting_edit_state.is_light_selected) {
-
+    switch (settings.mode) {
+    case MODE_NORMAL: {
+        Entity *entity = selection_get_selected_entity();
+        if (entity)
+            focus_point = matrix_get_position(entity->transform);
+    } break;
+    case MODE_LIGHTING: {
+        if (!lighting_edit_state.is_light_selected)
+            return;
         LightSource *light = lighting_group_get_light(
             lighting_edit_state.current_group,
             lighting_edit_state.currently_selected_light);
 
         if (light)
             focus_point = light->position;
-
-    } else {
-        Entity *entity = selection_get_selected_entity();
-        if (entity)
-            focus_point = matrix_get_position(entity->transform);
+    } break;
+    case MODE_TERRAIN: {
+        camera->target = raycast_ground_intersection(
+            GetScreenToWorldRay(GetMousePosition(), *camera),
+            settings.grid_height);
+        return;
+    } break;
     }
 
     camera->target = focus_point;
@@ -74,9 +83,7 @@ static inline void focus_selected(Camera *camera) {
 
 // In light edit mode this toggles the enabled status of the light.
 static inline void delete_selected_object(void) {
-    if (settings.mode == MODE_LIGHTING) {
-        lighting_edit_selected_light_toggle_enabled();
-    } else if (entity_selection_state.is_entity_selected) {
+    if (entity_selection_state.is_entity_selected) {
         scene_remove(entity_selection_state.handle);
         selection_deselect_all();
     }
@@ -85,6 +92,13 @@ static inline void delete_selected_object(void) {
 static inline void set_asset_slot(uint8_t slot) {
     settings.current_asset_slot = slot;
     entity_adding_state.rotation_angle_y = 0;
+}
+
+static inline void set_mode(Mode mode) {
+    if (transform_operation.mode != TRANSFORM_NONE)
+        editor_cancel_transform();
+
+    settings.mode = mode;
 }
 
 void editor_stop_transform(void) {
@@ -111,8 +125,12 @@ void editor_cancel_transform(void) {
 
 void editor_execute_action(ShortcutAction action, Camera *camera) {
     switch (action) {
+    case ACTION_NONE:
+        break;
+
     case ACTION_TOGGLE_FPS_CONTROLS:
-        editor_set_fpv_controls_enabled(camera, !settings.fps_controls_enabled);
+        editor_set_fpv_controls_enabled(*camera,
+                                        !settings.fps_controls_enabled);
         break;
     case ACTION_TOGGLE_GRID:
         settings.grid_enabled = !settings.grid_enabled;
@@ -122,19 +140,6 @@ void editor_execute_action(ShortcutAction action, Camera *camera) {
         break;
     case ACTION_TOGGLE_QUANTIZE:
         settings.quantize_to_grid_enabled = !settings.quantize_to_grid_enabled;
-        break;
-    case ACTION_TOGGLE_ADDING_RAYCAST_INCLUDE_OBJECTS:
-        settings.adding_raycast_include_objects =
-            !settings.adding_raycast_include_objects;
-        break;
-    case ACTION_TOGGLE_LIGHTING_EDIT_MODE:
-        if (transform_operation.mode != TRANSFORM_NONE)
-            editor_cancel_transform();
-
-        if (settings.mode != MODE_LIGHTING)
-            settings.mode = MODE_LIGHTING;
-        else
-            settings.mode = MODE_NORMAL;
         break;
     case ACTION_TOGGLE_LIGHTING:
         settings.lighting_enabled = !settings.lighting_enabled;
@@ -149,6 +154,9 @@ void editor_execute_action(ShortcutAction action, Camera *camera) {
 
     case ACTION_OBJECT_DELETE:
         delete_selected_object();
+        break;
+    case ACTION_LIGHT_TOGGLE_ENABLED:
+        lighting_edit_selected_light_toggle_enabled();
         break;
 
     case ACTION_START_PICKING_ASSET:
@@ -178,7 +186,7 @@ void editor_execute_action(ShortcutAction action, Camera *camera) {
         start_transform(TRANSFORM_TRANSLATE, AXIS_Z);
         break;
     case ACTION_GRID_RESET:
-        settings.grid_density = 1;
+        settings.grid_density = SETTINGS_DEFAULT_GRID_DENSITY;
         settings.grid_height = 0;
         break;
     case ACTION_CHANGE_AXIS_X:
@@ -243,10 +251,33 @@ void editor_execute_action(ShortcutAction action, Camera *camera) {
         focus_selected(camera);
     } break;
 
-    case ACTION_NONE:
+    case ACTION_SET_MODE_NORMAL:
+        set_mode(MODE_NORMAL);
         break;
+    case ACTION_SET_MODE_LIGHTING:
+        set_mode(MODE_LIGHTING);
+        break;
+    case ACTION_SET_MODE_TERRAIN:
+        set_mode(MODE_TERRAIN);
+        break;
+
+    case ACTION_TOGGLE_RAYCAST_OBJECT_IGNORE:
+        settings.adding_raycast_include_objects =
+            !settings.adding_raycast_include_objects;
+        break;
+
     case ACTION_TOGGLE_TILE_MODE:
         printf("Unimplemented\n");
+        break;
+
+    case ACTION_TERRAIN_TOOL_1_RAISE:
+        terrain_edit_state.tool = TERRAIN_TOOL_RAISE;
+        break;
+    case ACTION_TERRAIN_TOOL_2_RAISE_SMOOTH:
+        terrain_edit_state.tool = TERRAIN_TOOL_RAISE_SMOOTH;
+        break;
+    case ACTION_TERRAIN_TOOL_3_SET:
+        terrain_edit_state.tool = TERRAIN_TOOL_SET;
         break;
     }
 }
@@ -309,11 +340,11 @@ void editor_adjust_gizmo_size(float amount) {
         settings.gizmo_size = 0.1;
 }
 
-void editor_set_fpv_controls_enabled(Camera *camera, int enabled) {
+void editor_set_fpv_controls_enabled(Camera camera, int enabled) {
     settings.fps_controls_enabled = enabled;
 
     if (enabled) {
-        camera->position.y = settings.grid_height + FPV_PLAYER_HEIGHT;
+        camera.position.y = settings.grid_height + FPV_PLAYER_HEIGHT;
         DisableCursor();
     } else
         EnableCursor();

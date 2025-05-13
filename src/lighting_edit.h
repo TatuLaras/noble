@@ -48,8 +48,4 @@ void lighting_edit_transform_apply(void);
 // Gets the position change vector from the current transform operation.
 Vector3 lighting_edit_transform_get_delta_vector(void);
 
-// Renders a properties menu for the currently selected light. Renders nothing
-// no light is selected.
-void lighting_edit_render_properties_menu(void);
-
 #endif

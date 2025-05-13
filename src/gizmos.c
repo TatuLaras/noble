@@ -1,11 +1,13 @@
 #include "gizmos.h"
+#include "lighting.h"
 #include "lighting_edit.h"
 #include "rlgl.h"
 #include "settings.h"
+#include "terrain.h"
+#include "terrain_edit.h"
 #include "transform.h"
 #include <raylib.h>
 #include <raymath.h>
-#include <stdio.h>
 
 void gizmos_draw_grid(int slices, float spacing, Vector3 origin) {
     int halfSlices = slices / 2;
@@ -105,7 +107,7 @@ void gizmos_render_transform_gizmo(Matrix transform) {
     DrawSphere(z_axis, 0.05, BLUE);
 }
 
-void gizmos_render_light_gizmos(LightingGroupHandle handle, Camera camera) {
+void gizmos_render_light_gizmos(LightingGroupHandle handle, Camera *camera) {
 
     LightSourceHandle i = 0;
     LightSource *light = 0;
@@ -131,10 +133,10 @@ void gizmos_render_light_gizmos(LightingGroupHandle handle, Camera camera) {
             }
         }
 
-        Vector2 light_pos = GetWorldToScreen(light_3d_pos, camera);
+        Vector2 light_pos = GetWorldToScreen(light_3d_pos, *camera);
         Vector2 light_base_pos = GetWorldToScreen(
             (Vector3){light_3d_pos.x, settings.grid_height, light_3d_pos.z},
-            camera);
+            *camera);
 
         if (light_3d_pos.y < settings.grid_height &&
             light_base_pos.y > light_pos.y)
@@ -160,4 +162,10 @@ void gizmos_render_light_gizmos(LightingGroupHandle handle, Camera camera) {
                 (Vector2){light_pos.x + LIGHT_SELECT_RADIUS + 4, light_pos.y},
                 2, color);
     }
+}
+
+void gizmos_render_terrain_gizmos(void) {
+    if (!IsCursorHidden())
+        DrawCircleLinesV(GetMousePosition(), terrain_edit_state.tool_radius,
+                         WHITE);
 }

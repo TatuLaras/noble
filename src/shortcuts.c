@@ -1,5 +1,7 @@
 #include "shortcuts.h"
+
 #include "common.h"
+#include "settings.h"
 #include <raylib.h>
 #include <stddef.h>
 
@@ -15,6 +17,8 @@ typedef struct {
     int require_shift_down;
     int require_ctrl_down;
     int require_alt_down;
+    int is_global;
+    Mode mode;
 } Shortcut;
 
 typedef struct {
@@ -23,26 +27,91 @@ typedef struct {
 } ShortcutBuffer;
 ShortcutBuffer shortcut_buffer = {0};
 
+// Exclusive to default mode (MODE_DEFAULT) if not specified otherwise
 static Shortcut shortcuts[] = {
-    {.action = ACTION_TOGGLE_GRID, .keypresses = {KEY_P}},
-    {.action = ACTION_TOGGLE_GIZMOS, .keypresses = {KEY_O}},
-    {.action = ACTION_TOGGLE_QUANTIZE, .keypresses = {KEY_Q}},
-    {.action = ACTION_TOGGLE_LIGHTING_EDIT_MODE, .keypresses = {KEY_S}},
-    {.action = ACTION_TOGGLE_LIGHTING, .keypresses = {KEY_L}},
-    {.action = ACTION_OBJECT_DELETE, .keypresses = {KEY_D}},
+    {
+        .action = ACTION_TOGGLE_GRID,
+        .keypresses = {KEY_P},
+        .is_global = 1,
+    },
+    {
+        .action = ACTION_TOGGLE_GIZMOS,
+        .keypresses = {KEY_O},
+        .is_global = 1,
+    },
+    {
+        .action = ACTION_TOGGLE_QUANTIZE,
+        .keypresses = {KEY_Q},
+        .is_global = 1,
+    },
+    {
+        .action = ACTION_TOGGLE_LIGHTING,
+        .keypresses = {KEY_L},
+        .is_global = 1,
+    },
     {.action = ACTION_OBJECT_DELETE, .keypresses = {KEY_DELETE}},
     {.action = ACTION_OBJECT_DELETE, .keypresses = {KEY_BACKSPACE}},
+    {
+        .action = ACTION_LIGHT_TOGGLE_ENABLED,
+        .keypresses = {KEY_DELETE},
+        .mode = MODE_LIGHTING,
+    },
+    {
+        .action = ACTION_LIGHT_TOGGLE_ENABLED,
+        .keypresses = {KEY_BACKSPACE},
+        .mode = MODE_LIGHTING,
+    },
     {.action = ACTION_START_PICKING_ASSET, .keypresses = {KEY_SPACE}},
-    {.action = ACTION_START_PICKING_SKYBOX, .keypresses = {KEY_F10}},
-    {.action = ACTION_OBJECT_START_TRANSLATE_X, .keypresses = {KEY_G, KEY_X}},
-    {.action = ACTION_OBJECT_START_TRANSLATE_Y, .keypresses = {KEY_G, KEY_Y}},
-    {.action = ACTION_OBJECT_START_TRANSLATE_Z, .keypresses = {KEY_G, KEY_Z}},
-    {.action = ACTION_OBJECT_START_ROTATE_X, .keypresses = {KEY_R, KEY_X}},
-    {.action = ACTION_OBJECT_START_ROTATE_Y, .keypresses = {KEY_R, KEY_Y}},
-    {.action = ACTION_OBJECT_START_ROTATE_Z, .keypresses = {KEY_R, KEY_Z}},
-    {.action = ACTION_CHANGE_AXIS_X, .keypresses = {KEY_X}},
-    {.action = ACTION_CHANGE_AXIS_Y, .keypresses = {KEY_Y}},
-    {.action = ACTION_CHANGE_AXIS_Z, .keypresses = {KEY_Z}},
+    {
+        .action = ACTION_START_PICKING_SKYBOX,
+        .keypresses = {KEY_F10},
+        .is_global = 1,
+    },
+    {
+        .action = ACTION_OBJECT_START_TRANSLATE_X,
+        .keypresses = {KEY_G, KEY_X},
+        .is_global = 1,
+    },
+    {
+        .action = ACTION_OBJECT_START_TRANSLATE_Y,
+        .keypresses = {KEY_G, KEY_Y},
+        .is_global = 1,
+    },
+    {
+        .action = ACTION_OBJECT_START_TRANSLATE_Z,
+        .keypresses = {KEY_G, KEY_Z},
+        .is_global = 1,
+    },
+    {
+        .action = ACTION_OBJECT_START_ROTATE_X,
+        .keypresses = {KEY_R, KEY_X},
+        .is_global = 1,
+    },
+    {
+        .action = ACTION_OBJECT_START_ROTATE_Y,
+        .keypresses = {KEY_R, KEY_Y},
+        .is_global = 1,
+    },
+    {
+        .action = ACTION_OBJECT_START_ROTATE_Z,
+        .keypresses = {KEY_R, KEY_Z},
+        .is_global = 1,
+    },
+    {
+        .action = ACTION_CHANGE_AXIS_X,
+        .keypresses = {KEY_X},
+        .is_global = 1,
+    },
+    {
+        .action = ACTION_CHANGE_AXIS_Y,
+        .keypresses = {KEY_Y},
+        .is_global = 1,
+    },
+    {
+        .action = ACTION_CHANGE_AXIS_Z,
+        .keypresses = {KEY_Z},
+        .is_global = 1,
+    },
     {.action = ACTION_ASSET_SLOT_1, .keypresses = {KEY_ONE}},
     {.action = ACTION_ASSET_SLOT_2, .keypresses = {KEY_TWO}},
     {.action = ACTION_ASSET_SLOT_3, .keypresses = {KEY_THREE}},
@@ -53,17 +122,48 @@ static Shortcut shortcuts[] = {
     {.action = ACTION_ASSET_SLOT_8, .keypresses = {KEY_EIGHT}},
     {.action = ACTION_ASSET_SLOT_9, .keypresses = {KEY_NINE}},
     {.action = ACTION_ASSET_SLOT_10, .keypresses = {KEY_ZERO}},
-    {.action = ACTION_TOGGLE_DEBUG_INFO, .keypresses = {KEY_F11}},
-    {.action = ACTION_TOGGLE_PROPERTIES_MENU, .keypresses = {KEY_N}},
-    {.action = ACTION_CAMERA_FOCUS_SELECTED, .keypresses = {KEY_F}},
-    {.action = ACTION_CAMERA_RESET, .keypresses = {KEY_B}},
+    {
+        .action = ACTION_TERRAIN_TOOL_1_RAISE,
+        .keypresses = {KEY_ONE},
+        .mode = MODE_TERRAIN,
+    },
+    {
+        .action = ACTION_TERRAIN_TOOL_2_RAISE_SMOOTH,
+        .keypresses = {KEY_TWO},
+        .mode = MODE_TERRAIN,
+    },
+    {
+        .action = ACTION_TERRAIN_TOOL_3_SET,
+        .keypresses = {KEY_THREE},
+        .mode = MODE_TERRAIN,
+    },
+    {
+        .action = ACTION_TOGGLE_DEBUG_INFO,
+        .keypresses = {KEY_F11},
+        .is_global = 1,
+    },
+    {
+        .action = ACTION_TOGGLE_PROPERTIES_MENU,
+        .keypresses = {KEY_N},
+        .is_global = 1,
+    },
+    {
+        .action = ACTION_CAMERA_FOCUS_SELECTED,
+        .keypresses = {KEY_F},
+        .is_global = 1,
+    },
+    {.action = ACTION_CAMERA_RESET, .keypresses = {KEY_B}, .is_global = 1},
+    {.action = ACTION_SET_MODE_NORMAL, .keypresses = {KEY_A}, .is_global = 1},
+    {.action = ACTION_SET_MODE_LIGHTING, .keypresses = {KEY_S}, .is_global = 1},
+    {.action = ACTION_SET_MODE_TERRAIN, .keypresses = {KEY_D}, .is_global = 1},
     {
         .action = ACTION_TOGGLE_FPS_CONTROLS,
         .keypresses = {KEY_F},
         .require_shift_down = 1,
+        .is_global = 1,
     },
     {
-        .action = ACTION_TOGGLE_ADDING_RAYCAST_INCLUDE_OBJECTS,
+        .action = ACTION_TOGGLE_RAYCAST_OBJECT_IGNORE,
         .keypresses = {KEY_I},
     },
     {
@@ -80,6 +180,7 @@ static Shortcut shortcuts[] = {
         .action = ACTION_SAVE_SCENE,
         .keypresses = {KEY_S},
         .require_ctrl_down = 1,
+        .is_global = 1,
     },
 };
 
@@ -97,7 +198,8 @@ static Shortcut get_matching_shortcut(int shift_down, int ctrl_down,
 
         if ((shift_down != shortcuts[i].require_shift_down) ||
             (ctrl_down != shortcuts[i].require_ctrl_down) ||
-            (alt_down != shortcuts[i].require_alt_down))
+            (alt_down != shortcuts[i].require_alt_down) ||
+            (!shortcuts[i].is_global && shortcuts[i].mode != settings.mode))
             continue;
 
         ShortcutMatchType match_type = MATCH_FULL;
