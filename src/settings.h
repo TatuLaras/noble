@@ -5,7 +5,7 @@
 #include "handles.h"
 
 #define SETTINGS_ASSET_SLOTS_AVAILABLE 10
-#define SETTINGS_DEFAULT_GRID_DENSITY 2.0
+#define SETTINGS_DEFAULT_GRID_DENSITY 1.0
 
 typedef enum {
     MODE_NORMAL,
@@ -29,9 +29,13 @@ typedef struct {
     char project_directory[MAX_PATH_LENGTH];
     char asset_directory[MAX_PATH_LENGTH];
     char skybox_directory[MAX_PATH_LENGTH];
+    char terrain_texture_directory[MAX_PATH_LENGTH];
     char *scene_filepath;
-    AssetHandle selected_asset[SETTINGS_ASSET_SLOTS_AVAILABLE];
+
     uint8_t current_asset_slot;
+    AssetHandle selected_assets[SETTINGS_ASSET_SLOTS_AVAILABLE];
+    TerrainTextureHandle
+        selected_terrain_textures[SETTINGS_ASSET_SLOTS_AVAILABLE];
 } Settings;
 
 extern Settings settings;

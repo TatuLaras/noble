@@ -46,7 +46,7 @@ static Shortcut shortcuts[] = {
     },
     {
         .action = ACTION_TOGGLE_LIGHTING,
-        .keypresses = {KEY_L},
+        .keypresses = {KEY_U},
         .is_global = 1,
     },
     {.action = ACTION_OBJECT_DELETE, .keypresses = {KEY_DELETE}},
@@ -62,6 +62,11 @@ static Shortcut shortcuts[] = {
         .mode = MODE_LIGHTING,
     },
     {.action = ACTION_START_PICKING_ASSET, .keypresses = {KEY_SPACE}},
+    {
+        .action = ACTION_START_PICKING_TERRAIN_TEXTURE,
+        .keypresses = {KEY_SPACE},
+        .mode = MODE_TERRAIN,
+    },
     {
         .action = ACTION_START_PICKING_SKYBOX,
         .keypresses = {KEY_F10},
@@ -123,18 +128,53 @@ static Shortcut shortcuts[] = {
     {.action = ACTION_ASSET_SLOT_9, .keypresses = {KEY_NINE}},
     {.action = ACTION_ASSET_SLOT_10, .keypresses = {KEY_ZERO}},
     {
-        .action = ACTION_TERRAIN_TOOL_1_RAISE,
+        .action = ACTION_TERRAIN_SLOT_1,
         .keypresses = {KEY_ONE},
         .mode = MODE_TERRAIN,
     },
     {
-        .action = ACTION_TERRAIN_TOOL_2_RAISE_SMOOTH,
+        .action = ACTION_TERRAIN_SLOT_2,
         .keypresses = {KEY_TWO},
         .mode = MODE_TERRAIN,
     },
     {
-        .action = ACTION_TERRAIN_TOOL_3_SET,
+        .action = ACTION_TERRAIN_SLOT_3,
         .keypresses = {KEY_THREE},
+        .mode = MODE_TERRAIN,
+    },
+    {
+        .action = ACTION_TERRAIN_SLOT_4,
+        .keypresses = {KEY_FOUR},
+        .mode = MODE_TERRAIN,
+    },
+    {
+        .action = ACTION_TERRAIN_SLOT_5,
+        .keypresses = {KEY_FIVE},
+        .mode = MODE_TERRAIN,
+    },
+    {
+        .action = ACTION_TERRAIN_SLOT_6,
+        .keypresses = {KEY_SIX},
+        .mode = MODE_TERRAIN,
+    },
+    {
+        .action = ACTION_TERRAIN_SLOT_7,
+        .keypresses = {KEY_SEVEN},
+        .mode = MODE_TERRAIN,
+    },
+    {
+        .action = ACTION_TERRAIN_TOOL_RAISE,
+        .keypresses = {KEY_H},
+        .mode = MODE_TERRAIN,
+    },
+    {
+        .action = ACTION_TERRAIN_TOOL_RAISE_SMOOTH,
+        .keypresses = {KEY_J},
+        .mode = MODE_TERRAIN,
+    },
+    {
+        .action = ACTION_TERRAIN_TOOL_SET,
+        .keypresses = {KEY_K},
         .mode = MODE_TERRAIN,
     },
     {
@@ -170,6 +210,7 @@ static Shortcut shortcuts[] = {
         .action = ACTION_GRID_RESET,
         .keypresses = {KEY_C},
         .require_alt_down = 1,
+        .is_global = 1,
     },
     {
         .action = ACTION_PICK_ASSET_FROM_SELECTED_ENTITY,

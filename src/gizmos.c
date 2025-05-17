@@ -107,11 +107,11 @@ void gizmos_render_transform_gizmo(Matrix transform) {
     DrawSphere(z_axis, 0.05, BLUE);
 }
 
-void gizmos_render_light_gizmos(LightingGroupHandle handle, Camera *camera) {
+void gizmos_render_light_gizmos(Camera camera) {
 
     LightSourceHandle i = 0;
     LightSource *light = 0;
-    while ((light = lighting_group_get_light(handle, i++))) {
+    while ((light = lighting_scene_get_light(i++))) {
         if (light->type == LIGHT_NULL)
             break;
         Vector3 light_3d_pos = light->position;
@@ -133,10 +133,10 @@ void gizmos_render_light_gizmos(LightingGroupHandle handle, Camera *camera) {
             }
         }
 
-        Vector2 light_pos = GetWorldToScreen(light_3d_pos, *camera);
+        Vector2 light_pos = GetWorldToScreen(light_3d_pos, camera);
         Vector2 light_base_pos = GetWorldToScreen(
             (Vector3){light_3d_pos.x, settings.grid_height, light_3d_pos.z},
-            *camera);
+            camera);
 
         if (light_3d_pos.y < settings.grid_height &&
             light_base_pos.y > light_pos.y)
@@ -164,8 +164,46 @@ void gizmos_render_light_gizmos(LightingGroupHandle handle, Camera *camera) {
     }
 }
 
-void gizmos_render_terrain_gizmos(void) {
-    if (!IsCursorHidden())
-        DrawCircleLinesV(GetMousePosition(), terrain_edit_state.tool_radius,
-                         WHITE);
+void gizmos_render_terrain_gizmos(Camera camera) {
+
+    Vector2 mouse_pos = GetMousePosition();
+    if (IsCursorHidden())
+        mouse_pos = (Vector2){.x = GetScreenWidth() / 2.0,
+                              .y = GetScreenHeight() / 2.0};
+
+    RayCollision terrain_ray_collision =
+        terrain_raycast(GetScreenToWorldRay(mouse_pos, camera));
+    if (!terrain_ray_collision.hit)
+        return;
+
+    Vector2 terrain_point_screen_pos =
+        GetWorldToScreen(terrain_ray_collision.point, camera);
+
+    Vector3 radius_vector =
+        Vector3Normalize(Vector3Subtract(camera.target, camera.position));
+    radius_vector =
+        Vector3Normalize(Vector3CrossProduct(radius_vector, camera.up));
+    radius_vector = Vector3Scale(radius_vector, terrain_edit_state.tool_radius);
+    radius_vector = Vector3Add(terrain_ray_collision.point, radius_vector);
+    float screenspace_radius = Vector2Distance(
+        GetWorldToScreen(radius_vector, camera), terrain_point_screen_pos);
+
+    DrawCircleLinesV(terrain_point_screen_pos, screenspace_radius, WHITE);
+
+    // Affected points
+
+    for (size_t i = 0; i < terrain.size; i++) {
+        size_t x = i % terrain.width;
+        size_t y = i / terrain.width;
+        Vector3 terrain_point_world_pos =
+            Vector3Add((Vector3){terrain.top_left_world_pos.x, 0,
+                                 terrain.top_left_world_pos.y},
+                       (Vector3){x, terrain.heights[i], y});
+
+        if (terrain_is_point_within_tool_radius(terrain_ray_collision.point,
+                                                terrain_point_world_pos)) {
+            Vector2 dot_pos = GetWorldToScreen(terrain_point_world_pos, camera);
+            DrawCircleV(dot_pos, 3, RED);
+        }
+    }
 }

@@ -16,7 +16,7 @@ endif
 CC = gcc
 PACKAGES = $(shell pkg-config --libs raylib opengl) -lm
 SANITIZE = -fsanitize=address
-CFLAGS = $(PACKAGES) $(EXTERNAL_INCLUDE) -Wall -Wextra -Wshadow -pedantic -Wstrict-prototypes -march=native
+CFLAGS = $(PACKAGES) $(EXTERNAL_INCLUDE) -Wall -Wextra -Wshadow -pedantic -Wstrict-prototypes -march=native -O0
 CFLAGS_TEST = $(PACKAGES) -DTEST -I$(UNITY_DIR) -I$(SRC_DIR) -I$(EXTERNAL_INCLUDE) -ggdb $(SANITIZE) -std=c23
 
 CFLAGS_DEBUG = $(CFLAGS) -DDEBUG -ggdb

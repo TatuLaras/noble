@@ -2,6 +2,7 @@
 
 #include "asset_picker.h"
 #include "assets.h"
+#include "terrain_textures.h"
 #include "common.h"
 #include "settings.h"
 #include "shortcuts.h"
@@ -36,33 +37,32 @@ static uint16_t properties_menu_height = 0;
 static inline void render_status_bar(Rectangle rect) {
     char status_string[256] = {0};
 
-    int item_number = 0;
     char *item_name = "";
+    char *submode = "";
     char *mode = "LIGHTING";
 
     if (settings.mode == MODE_NORMAL) {
         mode = "NORMAL";
         item_name = assets_get_name(
-            settings.selected_asset[settings.current_asset_slot]);
-        item_number = settings.current_asset_slot + 1;
+            settings.selected_assets[settings.current_asset_slot]);
     }
 
     if (settings.mode == MODE_TERRAIN) {
         mode = "TERRAIN";
         switch (terrain_edit_state.tool) {
         case TERRAIN_TOOL_RAISE:
-            item_name = "raise";
-            item_number = 1;
+            submode = "raise";
             break;
         case TERRAIN_TOOL_RAISE_SMOOTH:
-            item_name = "raise smooth";
-            item_number = 2;
+            submode = "raise smooth";
             break;
         case TERRAIN_TOOL_SET:
-            item_name = "set";
-            item_number = 3;
+            submode = "set";
             break;
         }
+
+        item_name = terrain_textures_get_name(
+            settings.selected_terrain_textures[settings.current_asset_slot]);
     }
 
     char *gizmos = "";
@@ -86,9 +86,9 @@ static inline void render_status_bar(Rectangle rect) {
         lighting = "shading";
 
     snprintf(status_string, ARRAY_LENGTH(status_string) - 1,
-             "%s  %u %s  |  o [%s]  p [%s]  q [%s]  i [%s]  s [%s]", mode,
-             item_number, item_name, gizmos, grid, snap, object_ignore,
-             lighting);
+             "%s %s  %u %s  |  o [%s]  p [%s]  q [%s]  i [%s]  s [%s]", mode,
+             submode, settings.current_asset_slot + 1, item_name, gizmos, grid,
+             snap, object_ignore, lighting);
 
     if (!shortcuts_waiting_for_keypress())
         GuiStatusBar(rect, status_string);

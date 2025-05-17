@@ -11,16 +11,11 @@
 typedef struct {
     LightSourceHandle currently_selected_light;
     LightSourceHandle currently_added_light;
-    LightingGroupHandle current_group;
     int is_light_selected;
     int is_light_added;
 } LightingEditState;
 
 extern LightingEditState lighting_edit_state;
-
-inline void lighting_edit_set_group(LightingGroupHandle handle) {
-    lighting_edit_state.current_group = handle;
-}
 
 // Adds a light source to the scene.
 int lighting_edit_add_light(Ray ray);

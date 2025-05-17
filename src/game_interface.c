@@ -7,7 +7,6 @@
 #include "gizmos.h"
 #include "lighting.h"
 #include "lighting_edit.h"
-#include "model_files.h"
 #include "model_vector.h"
 #include "orbital_controls.h"
 #include "properties_menu.h"
@@ -21,6 +20,7 @@
 #include "skyboxes.h"
 #include "terrain.h"
 #include "terrain_edit.h"
+#include "terrain_textures.h"
 #include "transform.h"
 #include "ui.h"
 #include <assert.h>
@@ -36,15 +36,6 @@
 static Camera3D camera = {0};
 static RenderTexture scene_render_target = {0};
 
-static Mesh terrain_mesh = {0};
-static Material lighting_group_material = {0};
-
-static inline void generate_terrain_mesh(void) {
-    if (terrain_mesh.vaoId)
-        UnloadMesh(terrain_mesh);
-    terrain_mesh = terrain_generate_mesh();
-}
-
 static void render(void) {
     if (!scene_render_target.id || IsWindowResized()) {
         if (scene_render_target.id)
@@ -57,12 +48,8 @@ static void render(void) {
     BeginTextureMode(scene_render_target);
     ClearBackground((Color){0});
 
-    if (settings.mode == MODE_LIGHTING) {
-        LightingGroup *group =
-            lighting_scene_get_group(lighting_edit_state.current_group);
-        assert(group);
-        ClearBackground(group->ambient_color);
-    }
+    if (settings.mode == MODE_LIGHTING)
+        ClearBackground(lighting_scene.ambient_color);
 
     if (shortcuts_waiting_for_keypress())
         ClearBackground((Color){.r = 0x5d, .g = 0x52, .b = 0x52});
@@ -116,8 +103,11 @@ static void render(void) {
     }
 
     // Terrain mesh
-    DrawMesh(terrain_mesh, lighting_group_material,
-             MatrixTranslate(0, -0.02, 0));
+
+    Mesh *terrain_mesh = terrain_get_mesh();
+    if (terrain_mesh)
+        DrawMesh(terrain.mesh, terrain.material, MatrixTranslate(0, -0.02, 0));
+
     EndMode3D();
     EndTextureMode();
 
@@ -139,11 +129,10 @@ static void render(void) {
         case MODE_NORMAL:
             break;
         case MODE_LIGHTING:
-            gizmos_render_light_gizmos(lighting_edit_state.current_group,
-                                       &camera);
+            gizmos_render_light_gizmos(camera);
             break;
         case MODE_TERRAIN:
-            gizmos_render_terrain_gizmos();
+            gizmos_render_terrain_gizmos(camera);
             break;
         }
     }
@@ -154,7 +143,7 @@ static void render(void) {
         case PROPERTIES_EVENT_NONE:
             break;
         case PROPERTIES_EVENT_TERRAIN_RESIZE:
-            generate_terrain_mesh();
+            terrain_generate_mesh();
             break;
         }
     }
@@ -212,7 +201,7 @@ static inline void handle_inputs_normal(void) {
     // Object instantiation
     if (mouse_button_pressed(MOUSE_BUTTON_LEFT)) {
         Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
-        editor_instantiate_object(ray, lighting_edit_state.current_group);
+        editor_instantiate_object(ray);
         return;
     }
 
@@ -273,19 +262,28 @@ static inline void handle_inputs_lighting(void) {
 }
 
 static inline void handle_inputs_terrain(void) {
+    if (IsKeyPressed(KEY_LEFT_ALT))
+        DisableCursor();
+    if (IsKeyReleased(KEY_LEFT_ALT))
+        EnableCursor();
     if (IsKeyDown(KEY_LEFT_ALT)) {
-        terrain_edit_adjust_tool_radius(GetMouseWheelMove());
+        terrain_edit_adjust_tool_radius(GetMouseDelta().x);
         return;
     }
 
     if (mouse_button_down(MOUSE_BUTTON_LEFT)) {
-        if (terrain_edit_use_tool(GetMousePosition(), camera, 0))
-            generate_terrain_mesh();
+        ToolMode mode = TOOL_MODE_NORMAL;
+        if (IsKeyDown(KEY_LEFT_SHIFT))
+            mode = TOOL_MODE_TEXTURE;
+
+        if (terrain_edit_use_tool(GetMousePosition(), camera, mode))
+            terrain_generate_mesh();
         return;
     }
     if (mouse_button_down(MOUSE_BUTTON_RIGHT)) {
-        if (terrain_edit_use_tool(GetMousePosition(), camera, 1))
-            generate_terrain_mesh();
+        if (terrain_edit_use_tool(GetMousePosition(), camera,
+                                  TOOL_MODE_ALTERNATIVE_FUNCTION))
+            terrain_generate_mesh();
 
         return;
     }
@@ -293,7 +291,7 @@ static inline void handle_inputs_terrain(void) {
     if (mouse_button_released(MOUSE_BUTTON_LEFT) ||
         mouse_button_released(MOUSE_BUTTON_RIGHT)) {
         terrain_edit_finish_brush_stroke();
-        generate_terrain_mesh();
+        terrain_generate_mesh();
         return;
     }
 
@@ -329,7 +327,7 @@ static inline void handle_inputs(void) {
         if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_CAPS_LOCK) ||
             IsMouseButtonPressed(MOUSE_BUTTON_LEFT) ||
             IsMouseButtonPressed(MOUSE_BUTTON_RIGHT))
-            editor_set_fpv_controls_enabled(camera, 0);
+            editor_set_fpv_controls_enabled(&camera, 0);
 
         float delta_time = GetFrameTime();
         float vertical_movement = 0;
@@ -401,7 +399,7 @@ int game_init(char *scene_filepath) {
 
     ui_init();
     scene_init();
-    lighting_scene_init();
+    lighting_scene_init(BLACK);
 
     strcpy(settings.asset_directory, settings.project_directory);
     strcat(settings.asset_directory, "assets/");
@@ -409,17 +407,12 @@ int game_init(char *scene_filepath) {
     strcpy(settings.skybox_directory, settings.project_directory);
     strcat(settings.skybox_directory, "skyboxes/");
 
+    strcpy(settings.terrain_texture_directory, settings.project_directory);
+    strcat(settings.terrain_texture_directory, "terrain_textures/");
+
     assets_fetch_all(settings.asset_directory);
     skyboxes_fetch_all(settings.skybox_directory);
-
-    lighting_edit_state.current_group =
-        lighting_group_create((Color){0x21, 0x0d, 0x1f, 255});
-
-    lighting_group_material = LoadMaterialDefault();
-    lighting_group_material.maps[MATERIAL_MAP_DIFFUSE].texture =
-        load_aseprite_texture("test_terrain.aseprite");
-    lighting_group_add_material(lighting_edit_state.current_group,
-                                &lighting_group_material);
+    terrain_textures_fetch_all(settings.terrain_texture_directory);
 
     lighting_scene_set_enabled(settings.lighting_enabled);
 
@@ -431,7 +424,7 @@ int game_init(char *scene_filepath) {
     terrain_init(60);
     load_scene();
     scene_load_skybox(settings.skybox_directory);
-    generate_terrain_mesh();
+    terrain_generate_mesh();
     return 0;
 }
 
@@ -440,8 +433,7 @@ void game_main(void) {
 
         if (settings.mode == MODE_LIGHTING &&
             lighting_edit_state.is_light_selected) {
-            light_source_update(lighting_edit_state.current_group,
-                                lighting_edit_state.currently_selected_light,
+            light_source_update(lighting_edit_state.currently_selected_light,
                                 lighting_edit_transform_get_delta_vector());
         }
 
@@ -453,5 +445,7 @@ void game_main(void) {
 
 void game_deinit(void) {
     scene_free();
+    terrain_free();
+
     CloseWindow();
 }

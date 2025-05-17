@@ -4,7 +4,6 @@
 #include "raygui.h"
 #include "settings.h"
 #include "transform.h"
-#include "ui.h"
 #include <assert.h>
 #include <raylib.h>
 #include <raymath.h>
@@ -32,7 +31,7 @@ int lighting_edit_add_light(Ray ray) {
 
     light.position = settings_quantize_to_grid(light.position, 0);
 
-    if (!lighting_group_add_light(lighting_edit_state.current_group, light,
+    if (!lighting_scene_add_light(light,
                                   &lighting_edit_state.currently_added_light)) {
         lighting_edit_state.is_light_added = 1;
         return 0;
@@ -45,27 +44,23 @@ void lighting_edit_selected_light_toggle_enabled(void) {
         return;
 
     LightSource *light =
-        lighting_group_get_light(lighting_edit_state.current_group,
-                                 lighting_edit_state.currently_selected_light);
+        lighting_scene_get_light(lighting_edit_state.currently_selected_light);
     assert(light);
     light->is_disabled = !light->is_disabled;
 
-    light_source_update(lighting_edit_state.current_group,
-                        lighting_edit_state.currently_selected_light,
+    light_source_update(lighting_edit_state.currently_selected_light,
                         Vector3Zero());
 }
 
 void lighting_edit_adding_light_update(float delta_y) {
     LightSource *light =
-        lighting_group_get_light(lighting_edit_state.current_group,
-                                 lighting_edit_state.currently_added_light);
+        lighting_scene_get_light(lighting_edit_state.currently_added_light);
     if (!light)
         return;
 
     light->position.y += delta_y;
 
-    light_source_update(lighting_edit_state.current_group,
-                        lighting_edit_state.currently_added_light,
+    light_source_update(lighting_edit_state.currently_added_light,
                         Vector3Zero());
 }
 
@@ -81,8 +76,7 @@ void lighting_edit_select_light_at(Vector2 screen_position, Camera3D camera) {
     LightSourceHandle i = 0;
     LightSource *light = 0;
     LightSource *selected = 0;
-    while ((light = lighting_group_get_light(lighting_edit_state.current_group,
-                                             i++))) {
+    while ((light = lighting_scene_get_light(i++))) {
         Vector2 light_screen_pos = GetWorldToScreen(light->position, camera);
         if (Vector2DistanceSqr(light_screen_pos, screen_position) >
             LIGHT_SELECT_RADIUS * LIGHT_SELECT_RADIUS)
@@ -123,8 +117,7 @@ void lighting_edit_transform_apply(void) {
         return;
 
     LightSource *light =
-        lighting_group_get_light(lighting_edit_state.current_group,
-                                 lighting_edit_state.currently_selected_light);
+        lighting_scene_get_light(lighting_edit_state.currently_selected_light);
     if (!light || transform_operation.mode == TRANSFORM_NONE)
         return;
 

@@ -31,25 +31,22 @@ static inline void render_scene_properties(void) {
     uint16_t picker_height = 120;
     uint16_t spacing_height = 10;
 
-    LightingGroup *lighting_group =
-        lighting_scene_get_group(lighting_edit_state.current_group);
-
     Rectangle title_rect = ui_properties_menu_reserve_height(title_height);
     GuiLabel(title_rect, "Scene");
 
     // Color picker
-    Color before = lighting_group->ambient_color;
+    Color before = lighting_scene.ambient_color;
     Rectangle color_picker_rect =
         ui_properties_menu_reserve_height(picker_height);
     color_picker_rect.width -= 32;
     color_picker_rect.x += 2;
     color_picker_rect.y += 4;
-    GuiColorPicker(color_picker_rect, 0, &lighting_group->ambient_color);
-    Color after = lighting_group->ambient_color;
+    GuiColorPicker(color_picker_rect, 0, &lighting_scene.ambient_color);
+    Color after = lighting_scene.ambient_color;
 
     if (before.r != after.r || before.b != after.b || before.g != after.g ||
         before.a != after.a)
-        update_shader_data(lighting_edit_state.current_group);
+        update_shader_data();
 
     ui_properties_menu_reserve_height(spacing_height);
 
@@ -99,8 +96,7 @@ static inline void render_light_properties(void) {
         return;
 
     LightSource *light =
-        lighting_group_get_light(lighting_edit_state.current_group,
-                                 lighting_edit_state.currently_selected_light);
+        lighting_scene_get_light(lighting_edit_state.currently_selected_light);
     if (!light)
         return;
 

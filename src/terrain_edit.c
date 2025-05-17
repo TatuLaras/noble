@@ -4,12 +4,13 @@
 #include "settings.h"
 #include "terrain.h"
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define RADIUS_EDIT_SENSITIVITY 10.0
+#define RADIUS_EDIT_SENSITIVITY 0.0008
 
-TerrainEditState terrain_edit_state = {.tool_radius = 30};
+TerrainEditState terrain_edit_state = {.tool_radius = 0.5};
 static uint8_t *tool_applied_to_point = 0;
 static size_t tool_applied_to_point_size = 0;
 
@@ -34,9 +35,10 @@ TerrainScreenPoints terrain_edit_get_screen_points(Camera *camera) {
 }
 
 void terrain_edit_adjust_tool_radius(float amount) {
-    terrain_edit_state.tool_radius += amount * RADIUS_EDIT_SENSITIVITY;
-    if (terrain_edit_state.tool_radius < 10)
-        terrain_edit_state.tool_radius = 10;
+    terrain_edit_state.tool_radius +=
+        amount * RADIUS_EDIT_SENSITIVITY * terrain_edit_state.tool_radius;
+    if (terrain_edit_state.tool_radius < 0.1)
+        terrain_edit_state.tool_radius = 0.1;
 }
 
 // Returns effect of the selected tool on `height_value`.
@@ -60,10 +62,22 @@ static inline float tool_effect(float height_value, int alternative_mode,
     case TERRAIN_TOOL_SET:
         return settings.grid_height;
     }
+    return 0;
+}
+
+int terrain_is_point_within_tool_radius(Vector3 tool_origin,
+                                        Vector3 terrain_point) {
+    return Vector3DistanceSqr(terrain_point, tool_origin) <=
+           terrain_edit_state.tool_radius * terrain_edit_state.tool_radius;
 }
 
 int terrain_edit_use_tool(Vector2 screen_pos, Camera camera,
-                          int alternative_mode) {
+                          ToolMode tool_mode) {
+    RayCollision terrain_ray_collision =
+        terrain_raycast(GetScreenToWorldRay(screen_pos, camera));
+    if (!terrain_ray_collision.hit)
+        return 0;
+
     if (!tool_applied_to_point || tool_applied_to_point_size != terrain.size) {
         if (tool_applied_to_point)
             free(tool_applied_to_point);
@@ -74,10 +88,6 @@ int terrain_edit_use_tool(Vector2 screen_pos, Camera camera,
 
     int changes = 0;
 
-    Vector3 camera_forward =
-        Vector3Normalize(Vector3Subtract(camera.target, camera.position));
-
-    // Iterate through points inside tool effect radius
     for (size_t i = 0; i < terrain.size; i++) {
         if (tool_applied_to_point[i])
             continue;
@@ -89,26 +99,24 @@ int terrain_edit_use_tool(Vector2 screen_pos, Camera camera,
                                  terrain.top_left_world_pos.y},
                        (Vector3){x, terrain.heights[i], y});
 
-        Vector3 direction_from_camera = Vector3Normalize(
-            Vector3Subtract(terrain_point_world_pos, camera.position));
-
-        if (Vector3DotProduct(direction_from_camera, camera_forward) <= 0)
-            continue;
-
-        Vector2 terrain_point_screen_pos =
-            GetWorldToScreen(terrain_point_world_pos, camera);
-
-        float distance_from_screen_pos =
-            Vector2Distance(terrain_point_screen_pos, screen_pos);
-        if (distance_from_screen_pos < terrain_edit_state.tool_radius) {
-            terrain.heights[i] = tool_effect(
-                terrain.heights[i], alternative_mode,
-                distance_from_screen_pos / terrain_edit_state.tool_radius);
-
-            tool_applied_to_point[i] = 1;
+        if (terrain_is_point_within_tool_radius(terrain_ray_collision.point,
+                                                terrain_point_world_pos)) {
             changes = 1;
+            tool_applied_to_point[i] = 1;
+            printf("%u\n", tool_mode);
+
+            if (tool_mode == TOOL_MODE_TEXTURE) {
+                // if (settings.current_asset_slot <= TERRAIN_MAX_TEXTURES)
+                terrain.texture_indices[i] = settings.current_asset_slot;
+            } else {
+                //  TODO: smooth mode
+                terrain.heights[i] =
+                    tool_effect(terrain.heights[i],
+                                tool_mode == TOOL_MODE_ALTERNATIVE_FUNCTION, 1);
+            }
         }
     }
+
     return changes;
 }
 

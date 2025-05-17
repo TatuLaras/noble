@@ -48,7 +48,8 @@ static inline void pick_selected_entity_asset(void) {
 
     Entity *entity = scene_get_entity(entity_selection_state.handle);
     assert(entity);
-    settings.selected_asset[settings.current_asset_slot] = entity->asset_handle;
+    settings.selected_assets[settings.current_asset_slot] =
+        entity->asset_handle;
 }
 
 static inline void focus_selected(Camera *camera) {
@@ -62,8 +63,7 @@ static inline void focus_selected(Camera *camera) {
     case MODE_LIGHTING: {
         if (!lighting_edit_state.is_light_selected)
             return;
-        LightSource *light = lighting_group_get_light(
-            lighting_edit_state.current_group,
+        LightSource *light = lighting_scene_get_light(
             lighting_edit_state.currently_selected_light);
 
         if (light)
@@ -129,8 +129,7 @@ void editor_execute_action(ShortcutAction action, Camera *camera) {
         break;
 
     case ACTION_TOGGLE_FPS_CONTROLS:
-        editor_set_fpv_controls_enabled(*camera,
-                                        !settings.fps_controls_enabled);
+        editor_set_fpv_controls_enabled(camera, !settings.fps_controls_enabled);
         break;
     case ACTION_TOGGLE_GRID:
         settings.grid_enabled = !settings.grid_enabled;
@@ -161,6 +160,9 @@ void editor_execute_action(ShortcutAction action, Camera *camera) {
 
     case ACTION_START_PICKING_ASSET:
         asset_picker_start_search(PICKER_MODE_ASSET);
+        break;
+    case ACTION_START_PICKING_TERRAIN_TEXTURE:
+        asset_picker_start_search(PICKER_MODE_TERRAIN_TEXTURE);
         break;
     case ACTION_START_PICKING_SKYBOX:
         asset_picker_start_search(PICKER_MODE_SKYBOX);
@@ -202,25 +204,32 @@ void editor_execute_action(ShortcutAction action, Camera *camera) {
             start_transform(transform_operation.mode, AXIS_Z);
         break;
 
+    case ACTION_TERRAIN_SLOT_1:
     case ACTION_ASSET_SLOT_1:
         set_asset_slot(0);
         break;
     case ACTION_ASSET_SLOT_2:
+    case ACTION_TERRAIN_SLOT_2:
         set_asset_slot(1);
         break;
     case ACTION_ASSET_SLOT_3:
+    case ACTION_TERRAIN_SLOT_3:
         set_asset_slot(2);
         break;
     case ACTION_ASSET_SLOT_4:
+    case ACTION_TERRAIN_SLOT_4:
         set_asset_slot(3);
         break;
     case ACTION_ASSET_SLOT_5:
+    case ACTION_TERRAIN_SLOT_5:
         set_asset_slot(4);
         break;
     case ACTION_ASSET_SLOT_6:
+    case ACTION_TERRAIN_SLOT_6:
         set_asset_slot(5);
         break;
     case ACTION_ASSET_SLOT_7:
+    case ACTION_TERRAIN_SLOT_7:
         set_asset_slot(6);
         break;
     case ACTION_ASSET_SLOT_8:
@@ -270,13 +279,13 @@ void editor_execute_action(ShortcutAction action, Camera *camera) {
         printf("Unimplemented\n");
         break;
 
-    case ACTION_TERRAIN_TOOL_1_RAISE:
+    case ACTION_TERRAIN_TOOL_RAISE:
         terrain_edit_state.tool = TERRAIN_TOOL_RAISE;
         break;
-    case ACTION_TERRAIN_TOOL_2_RAISE_SMOOTH:
+    case ACTION_TERRAIN_TOOL_RAISE_SMOOTH:
         terrain_edit_state.tool = TERRAIN_TOOL_RAISE_SMOOTH;
         break;
-    case ACTION_TERRAIN_TOOL_3_SET:
+    case ACTION_TERRAIN_TOOL_SET:
         terrain_edit_state.tool = TERRAIN_TOOL_SET;
         break;
     }
@@ -285,17 +294,17 @@ void editor_execute_action(ShortcutAction action, Camera *camera) {
 void editor_mouse_select_object(Ray ray) {
     ObjectRaycastResult hit_result = raycast_scene_objects(ray);
     selection_deselect_all();
-    if (hit_result.hit_something)
+    if (hit_result.result.hit)
         selection_select_entity(hit_result.entity_id);
 }
 
-void editor_instantiate_object(Ray ray, LightingGroupHandle handle) {
+void editor_instantiate_object(Ray ray) {
     selection_deselect_all();
     if (adding_asset_instantiate(ray))
         return;
 
     Entity *entity = scene_get_entity(entity_adding_state.entity_handle);
-    lighting_group_add_entity(handle, entity);
+    lighting_scene_add_entity(entity);
 }
 
 void editor_transform_adjust(float amount, int slow_mode) {
@@ -316,9 +325,9 @@ void editor_added_light_adjust(float amount, int slow_mode) {
 }
 
 void editor_adjust_grid_density(float amount) {
-    if (amount < 0)
+    if (amount > 0)
         settings.grid_density /= 2;
-    else if (amount > 0)
+    else if (amount < 0)
         settings.grid_density *= 2;
 
     if (settings.grid_density < MIN_GRID_DENSITY)
@@ -340,11 +349,11 @@ void editor_adjust_gizmo_size(float amount) {
         settings.gizmo_size = 0.1;
 }
 
-void editor_set_fpv_controls_enabled(Camera camera, int enabled) {
+void editor_set_fpv_controls_enabled(Camera *camera, int enabled) {
     settings.fps_controls_enabled = enabled;
 
     if (enabled) {
-        camera.position.y = settings.grid_height + FPV_PLAYER_HEIGHT;
+        camera->position.y = settings.grid_height + FPV_PLAYER_HEIGHT;
         DisableCursor();
     } else
         EnableCursor();

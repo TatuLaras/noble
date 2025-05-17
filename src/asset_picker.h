@@ -12,6 +12,7 @@
 typedef enum {
     PICKER_MODE_ASSET,
     PICKER_MODE_SKYBOX,
+    PICKER_MODE_TERRAIN_TEXTURE,
 } AssetPickerMode;
 
 typedef struct {

@@ -3,7 +3,6 @@
 
 // User-facing editor logic.
 
-#include "handles.h"
 #include "shortcuts.h"
 #include <raylib.h>
 
@@ -14,7 +13,7 @@ void editor_execute_action(ShortcutAction action, Camera *camera);
 void editor_mouse_select_object(Ray ray);
 // Instantiates an entity with the current asset at `ray` intersection point
 // and adds it to light group `handle`.
-void editor_instantiate_object(Ray ray, LightingGroupHandle handle);
+void editor_instantiate_object(Ray ray);
 // Cancels currently active entity or light source transform operation.
 void editor_cancel_transform(void);
 // Stops and applies currently active entity or light source transform
@@ -33,6 +32,6 @@ void editor_adjust_grid_height(float amount);
 // Adjusts transform gizmo lenght by `amount`.
 void editor_adjust_gizmo_size(float amount);
 // Enters first-person-view mode.
-void editor_set_fpv_controls_enabled(Camera camera, int enabled);
+void editor_set_fpv_controls_enabled(Camera *camera, int enabled);
 
 #endif

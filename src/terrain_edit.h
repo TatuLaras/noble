@@ -1,6 +1,7 @@
 #ifndef _TERRAIN_EDIT
 #define _TERRAIN_EDIT
 
+#include "settings.h"
 #include <raylib.h>
 #include <stdint.h>
 
@@ -17,6 +18,12 @@ typedef enum {
     TERRAIN_TOOL_SET,
 } TerrainEditTool;
 
+typedef enum {
+    TOOL_MODE_NORMAL,
+    TOOL_MODE_ALTERNATIVE_FUNCTION,
+    TOOL_MODE_TEXTURE,
+} ToolMode;
+
 typedef struct {
     TerrainEditTool tool;
     float tool_radius;
@@ -31,12 +38,14 @@ void terrain_edit_adjust_tool_radius(float amount);
 // Applies currently selected terrain edit tool to points within tool affect
 // radius of `screen_pos`.
 // Returns 1 if terrain data was changed.
-//
-// `alternative_mode`: Use a tool's alternative mode of operation if such thing
-// exists.
 int terrain_edit_use_tool(Vector2 screen_pos, Camera camera,
-                          int alternative_mode);
+                          ToolMode tool_mode);
 
 void terrain_edit_finish_brush_stroke(void);
+
+// Returns 1 if `terrain_point` is within the radius of points which will be
+// affected by a tool if used.
+int terrain_is_point_within_tool_radius(Vector3 tool_origin,
+                                        Vector3 terrain_point);
 
 #endif

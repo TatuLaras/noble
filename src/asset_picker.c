@@ -3,10 +3,13 @@
 #include "assets.h"
 #include "common.h"
 #include "handles.h"
+#include "model_files.h"
 #include "scene.h"
 #include "settings.h"
 #include "skyboxes.h"
 #include "string_vector.h"
+#include "terrain.h"
+#include "terrain_textures.h"
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -23,6 +26,9 @@ static inline StringVector *get_list(void) {
         return &asset_list;
     case PICKER_MODE_SKYBOX:
         return &skybox_list;
+    case PICKER_MODE_TERRAIN_TEXTURE:
+        return &terrain_texture_list;
+        break;
     }
     return 0;
 }
@@ -92,11 +98,24 @@ void asset_picker_select_current_option(void) {
 
         switch (asset_picker.mode) {
         case PICKER_MODE_ASSET:
-            settings.selected_asset[settings.current_asset_slot] = handle;
+            settings.selected_assets[settings.current_asset_slot] = handle;
             break;
         case PICKER_MODE_SKYBOX:
             scene_set_skybox(handle, settings.skybox_directory);
             break;
+        case PICKER_MODE_TERRAIN_TEXTURE: {
+            settings.selected_terrain_textures[settings.current_asset_slot] =
+                handle;
+
+            char *texture_name = terrain_textures_get_name(handle);
+            char path[MAX_PATH_LENGTH] = {0};
+            strcpy(path, settings.terrain_texture_directory);
+            strcat(path, texture_name);
+            strcat(path, ".aseprite");
+
+            Texture texture = load_aseprite_texture(path);
+            terrain_bind_texture(settings.current_asset_slot, texture);
+        } break;
         }
     }
     stop_search();
