@@ -13,7 +13,10 @@ void editor_execute_action(ShortcutAction action, Camera *camera);
 void editor_mouse_select_object(Ray ray);
 // Instantiates an entity with the current asset at `ray` intersection point
 // and adds it to light group `handle`.
-void editor_instantiate_object(Ray ray);
+//
+// `copy_rotation`: Whether or not the rotation of the previously added entity
+// in that slot will be preserved.
+void editor_instantiate_object(Ray ray, int copy_rotation);
 // Cancels currently active entity or light source transform operation.
 void editor_cancel_transform(void);
 // Stops and applies currently active entity or light source transform
@@ -33,5 +36,8 @@ void editor_adjust_grid_height(float amount);
 void editor_adjust_gizmo_size(float amount);
 // Enters first-person-view mode.
 void editor_set_fpv_controls_enabled(Camera *camera, int enabled);
+// Gets a transform matrix from the `ray` s intersection with the ground plane
+// that can be used with model placement into the scene.
+Vector3 editor_general_scene_raycast(Ray ray, int no_quantize);
 
 #endif

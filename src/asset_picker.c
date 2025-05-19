@@ -139,6 +139,11 @@ void asset_picker_input_key(KeyboardKey key, int ctrl_down) {
         return;
     }
 
+    if (key >= KEY_ZERO && key <= KEY_NINE) {
+        append_character('0' + (key - KEY_ZERO));
+        return;
+    }
+
     if (key == KEY_BACKSPACE)
         erase_character();
 

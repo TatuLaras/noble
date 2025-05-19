@@ -201,7 +201,7 @@ static inline void handle_inputs_normal(void) {
     // Object instantiation
     if (mouse_button_pressed(MOUSE_BUTTON_LEFT)) {
         Ray ray = GetScreenToWorldRay(GetMousePosition(), camera);
-        editor_instantiate_object(ray);
+        editor_instantiate_object(ray, IsKeyDown(KEY_LEFT_SHIFT));
         return;
     }
 
@@ -262,8 +262,10 @@ static inline void handle_inputs_lighting(void) {
 }
 
 static inline void handle_inputs_terrain(void) {
-    if (IsKeyPressed(KEY_LEFT_ALT))
+    if (IsKeyPressed(KEY_LEFT_ALT)) {
+        terrain_edit_state.backup_screen_pos = GetMousePosition();
         DisableCursor();
+    }
     if (IsKeyReleased(KEY_LEFT_ALT))
         EnableCursor();
     if (IsKeyDown(KEY_LEFT_ALT)) {
@@ -304,7 +306,6 @@ static inline void handle_inputs(void) {
         // Select asset
         if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
             asset_picker_select_current_option();
-            entity_adding_state.rotation_angle_y = 0;
             return;
         }
 
@@ -312,8 +313,11 @@ static inline void handle_inputs(void) {
         return;
     }
 
-    if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE))
+    if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)) {
         DisableCursor();
+        terrain_edit_state.backup_screen_pos =
+            (Vector2){GetScreenWidth() / 2.0, GetScreenHeight() / 2.0};
+    }
     if (IsMouseButtonReleased(MOUSE_BUTTON_MIDDLE) &&
         transform_operation.mode == TRANSFORM_NONE)
         EnableCursor();

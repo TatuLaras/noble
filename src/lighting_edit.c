@@ -1,6 +1,6 @@
 #include "lighting_edit.h"
+#include "editor.h"
 #include "lighting.h"
-#include "raycast.h"
 #include "raygui.h"
 #include "settings.h"
 #include "transform.h"
@@ -23,7 +23,7 @@ static inline void deselect_lights(void) {
 int lighting_edit_add_light(Ray ray) {
     LightSource light = {
         .type = LIGHT_POINT,
-        .position = raycast_ground_intersection(ray, settings.grid_height),
+        .position = editor_general_scene_raycast(ray, 0),
         .color = (Color){0xff, 0xcc, 0x99, 0xff},
         .intensity = 6.0,
         .intensity_cap = 10.0,

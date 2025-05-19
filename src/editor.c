@@ -10,6 +10,7 @@
 #include "selection.h"
 #include "settings.h"
 #include "shortcuts.h"
+#include "terrain.h"
 #include "terrain_edit.h"
 #include "transform.h"
 #include <assert.h>
@@ -53,12 +54,24 @@ static inline void pick_selected_entity_asset(void) {
 }
 
 static inline void focus_selected(Camera *camera) {
-    Vector3 focus_point = Vector3Zero();
     switch (settings.mode) {
     case MODE_NORMAL: {
-        Entity *entity = selection_get_selected_entity();
-        if (entity)
-            focus_point = matrix_get_position(entity->transform);
+        ObjectRaycastResult hit_result = raycast_scene_objects(
+            GetScreenToWorldRay(GetMousePosition(), *camera));
+
+        if (hit_result.result.hit) {
+            Entity *entity_under_cursor =
+                scene_get_entity(hit_result.entity_id);
+            camera->target =
+                matrix_get_position(entity_under_cursor->transform);
+            break;
+        }
+    } // FALLTROUGH
+    case MODE_TERRAIN: {
+        RayCollision collision =
+            terrain_raycast(GetScreenToWorldRay(GetMousePosition(), *camera));
+        if (collision.hit)
+            camera->target = collision.point;
     } break;
     case MODE_LIGHTING: {
         if (!lighting_edit_state.is_light_selected)
@@ -67,18 +80,9 @@ static inline void focus_selected(Camera *camera) {
             lighting_edit_state.currently_selected_light);
 
         if (light)
-            focus_point = light->position;
-    } break;
-    case MODE_TERRAIN: {
-        camera->target = raycast_ground_intersection(
-            GetScreenToWorldRay(GetMousePosition(), *camera),
-            settings.grid_height);
-        return;
+            camera->target = light->position;
     } break;
     }
-
-    camera->target = focus_point;
-    camera->position = Vector3Add(focus_point, (Vector3){0.0, 2.0, 2.0});
 }
 
 // In light edit mode this toggles the enabled status of the light.
@@ -91,7 +95,6 @@ static inline void delete_selected_object(void) {
 
 static inline void set_asset_slot(uint8_t slot) {
     settings.current_asset_slot = slot;
-    entity_adding_state.rotation_angle_y = 0;
 }
 
 static inline void set_mode(Mode mode) {
@@ -298,9 +301,9 @@ void editor_mouse_select_object(Ray ray) {
         selection_select_entity(hit_result.entity_id);
 }
 
-void editor_instantiate_object(Ray ray) {
+void editor_instantiate_object(Ray ray, int copy_rotation) {
     selection_deselect_all();
-    if (adding_asset_instantiate(ray))
+    if (adding_asset_instantiate(ray, copy_rotation))
         return;
 
     Entity *entity = scene_get_entity(entity_adding_state.entity_handle);
@@ -353,8 +356,38 @@ void editor_set_fpv_controls_enabled(Camera *camera, int enabled) {
     settings.fps_controls_enabled = enabled;
 
     if (enabled) {
-        camera->position.y = settings.grid_height + FPV_PLAYER_HEIGHT;
+        Vector3 direction =
+            Vector3Normalize(Vector3Subtract(camera->target, camera->position));
+        direction.y = 0;
+        camera->position = editor_general_scene_raycast(
+            GetScreenToWorldRay(GetMousePosition(), *camera), 0);
+        camera->position.y += FPV_PLAYER_HEIGHT;
+        camera->target = Vector3Add(camera->position, direction);
         DisableCursor();
     } else
         EnableCursor();
+}
+
+Vector3 editor_general_scene_raycast(Ray ray, int no_quantize) {
+    Vector3 targetted_position =
+        raycast_ground_intersection(ray, settings.grid_height);
+
+    if (settings.adding_raycast_include_objects) {
+        ObjectRaycastResult object_result = raycast_scene_objects(ray);
+        if (object_result.result.hit &&
+            (Vector3DistanceSqr(ray.position, object_result.result.point) <
+             Vector3DistanceSqr(ray.position, targetted_position)))
+            targetted_position = object_result.result.point;
+
+        RayCollision collision = terrain_raycast(ray);
+        if (collision.hit &&
+            (Vector3DistanceSqr(ray.position, collision.point) <
+             Vector3DistanceSqr(ray.position, targetted_position)))
+            targetted_position = collision.point;
+    }
+
+    if (!no_quantize)
+        targetted_position = settings_quantize_to_grid(targetted_position, 0);
+
+    return targetted_position;
 }

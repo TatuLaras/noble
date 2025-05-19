@@ -3,25 +3,20 @@
 
 // Handles adding objects to the scene
 
+#include "handles.h"
 #include <raylib.h>
 #include <stddef.h>
-#include <string.h>
 
 typedef struct {
     int adding;
-    size_t entity_handle;
-    float rotation_angle_y;
+    EntityHandle entity_handle;
 } EntityAddingState;
 
 extern EntityAddingState entity_adding_state;
 
-// Gets a transform matrix from the `ray` s intersection with the ground plane
-// that can be used with model placement into the scene.
-Matrix adding_get_desired_model_transform(Ray ray);
-
 // Instantiates an instance of the currently selected asset in `settings` at
 // `ray` hit point into the `scene`. Returns 1 on error.
-int adding_asset_instantiate(Ray ray);
+int adding_asset_instantiate(Ray ray, int copy_rotation);
 
 // Updates position and rotation of the current entity being added to the scene
 // (mouse button held down) according to the `ray` hit and rotation_angle.

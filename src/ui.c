@@ -2,12 +2,13 @@
 
 #include "asset_picker.h"
 #include "assets.h"
-#include "terrain_textures.h"
 #include "common.h"
 #include "settings.h"
 #include "shortcuts.h"
 #include "terrain_edit.h"
+#include "terrain_textures.h"
 #include <assert.h>
+#include <math.h>
 #include <raylib.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -33,6 +34,26 @@ static const Color PROPERTIES_BACKGROUND_COLOR = {0x75, 0x32, 0x33, 0xff};
 static const Color PROPERTIES_BORDER_COLOR = {0xda, 0x57, 0x57, 0xff};
 
 static uint16_t properties_menu_height = 0;
+
+static inline void render_grid_size_indicator(uint16_t screen_width,
+                                              uint16_t height) {
+    float thick = 2.0;
+    float one_unit = 100.0;
+    float unit_tick_length = 10.0;
+    Color color = {0xe1, 0x73, 0x73, 0xff};
+    float line_height = one_unit * settings.grid_density;
+
+    DrawLineEx((Vector2){screen_width - thick, height},
+               (Vector2){screen_width - thick, height - line_height}, thick,
+               BLACK);
+    DrawLineEx((Vector2){screen_width - thick * 2, height},
+               (Vector2){screen_width - thick * 2, height - line_height}, thick,
+               WHITE);
+
+    DrawLineEx((Vector2){screen_width, height - one_unit},
+               (Vector2){screen_width - unit_tick_length, height - one_unit},
+               thick, color);
+}
 
 static inline void render_status_bar(Rectangle rect) {
     char status_string[256] = {0};
@@ -99,6 +120,7 @@ void ui_init(void) {
 }
 
 void ui_render(uint16_t screen_width, uint16_t screen_height) {
+    render_grid_size_indicator(screen_width, screen_height - 20);
     render_status_bar((Rectangle){0, screen_height - 20, screen_width, 20});
 
     if (!asset_picker.picking_asset)

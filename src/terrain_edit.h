@@ -27,6 +27,8 @@ typedef enum {
 typedef struct {
     TerrainEditTool tool;
     float tool_radius;
+    // A position to be used if cursor hidden
+    Vector2 backup_screen_pos;
 } TerrainEditState;
 
 extern TerrainEditState terrain_edit_state;

@@ -168,8 +168,7 @@ void gizmos_render_terrain_gizmos(Camera camera) {
 
     Vector2 mouse_pos = GetMousePosition();
     if (IsCursorHidden())
-        mouse_pos = (Vector2){.x = GetScreenWidth() / 2.0,
-                              .y = GetScreenHeight() / 2.0};
+        mouse_pos = terrain_edit_state.backup_screen_pos;
 
     RayCollision terrain_ray_collision =
         terrain_raycast(GetScreenToWorldRay(mouse_pos, camera));

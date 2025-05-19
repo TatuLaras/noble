@@ -43,7 +43,7 @@ void terrain_edit_adjust_tool_radius(float amount) {
 
 // Returns effect of the selected tool on `height_value`.
 static inline float tool_effect(float height_value, int alternative_mode,
-                                float distance_percentage) {
+                                Vector3 tool_to_terrain) {
     switch (terrain_edit_state.tool) {
     case TERRAIN_TOOL_RAISE: {
         float multiplier = 1;
@@ -56,7 +56,8 @@ static inline float tool_effect(float height_value, int alternative_mode,
         if (alternative_mode)
             multiplier = -1;
 
-        multiplier *= 1 - distance_percentage;
+        multiplier *=
+            1 - Vector3Length(tool_to_terrain) / terrain_edit_state.tool_radius;
         return height_value + settings.grid_density * multiplier;
     }
     case TERRAIN_TOOL_SET:
@@ -103,16 +104,16 @@ int terrain_edit_use_tool(Vector2 screen_pos, Camera camera,
                                                 terrain_point_world_pos)) {
             changes = 1;
             tool_applied_to_point[i] = 1;
-            printf("%u\n", tool_mode);
 
             if (tool_mode == TOOL_MODE_TEXTURE) {
-                // if (settings.current_asset_slot <= TERRAIN_MAX_TEXTURES)
-                terrain.texture_indices[i] = settings.current_asset_slot;
+                if (settings.current_asset_slot <= TERRAIN_MAX_TEXTURES)
+                    terrain.texture_indices[i] = settings.current_asset_slot;
             } else {
-                //  TODO: smooth mode
                 terrain.heights[i] =
                     tool_effect(terrain.heights[i],
-                                tool_mode == TOOL_MODE_ALTERNATIVE_FUNCTION, 1);
+                                tool_mode == TOOL_MODE_ALTERNATIVE_FUNCTION,
+                                Vector3Subtract(terrain_point_world_pos,
+                                                terrain_ray_collision.point));
             }
         }
     }
