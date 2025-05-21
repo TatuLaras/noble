@@ -33,7 +33,13 @@
 
 #define VERTICAL_MOVEMENT_SPEED 3.0
 
-static Camera3D camera = {0};
+static Camera camera = {
+    .position = {0.0f, 6.0f, 6.0f},
+    .target = {0.0f, 0.0f, 0.0f},
+    .up = {0.0f, 1.0f, 0.0f},
+    .fovy = 45.0f,
+};
+
 static RenderTexture scene_render_target = {0};
 
 static void render(void) {
@@ -47,9 +53,6 @@ static void render(void) {
 
     BeginTextureMode(scene_render_target);
     ClearBackground((Color){0});
-
-    if (settings.mode == MODE_LIGHTING)
-        ClearBackground(lighting_scene.ambient_color);
 
     if (shortcuts_waiting_for_keypress())
         ClearBackground((Color){.r = 0x5d, .g = 0x52, .b = 0x52});
@@ -102,11 +105,7 @@ static void render(void) {
             (Vector3){origin.x, settings.grid_height + 0.003, origin.z});
     }
 
-    // Terrain mesh
-
-    Mesh *terrain_mesh = terrain_get_mesh();
-    if (terrain_mesh)
-        DrawMesh(terrain.mesh, terrain.material, MatrixTranslate(0, -0.02, 0));
+    terrain_draw();
 
     EndMode3D();
     EndTextureMode();
@@ -420,15 +419,11 @@ int game_init(char *scene_filepath) {
 
     lighting_scene_set_enabled(settings.lighting_enabled);
 
-    camera.position = (Vector3){0.0f, 6.0f, 6.0f};
-    camera.target = (Vector3){0.0f, 0.0f, 0.0f};
-    camera.up = (Vector3){0.0f, 1.0f, 0.0f};
-    camera.fovy = 45.0f;
-
-    terrain_init(60);
+    terrain_init(50);
     load_scene();
     scene_load_skybox(settings.skybox_directory);
     terrain_generate_mesh();
+    terrain_textures_load_all_selected(settings.terrain_texture_directory);
     return 0;
 }
 
@@ -437,8 +432,8 @@ void game_main(void) {
 
         if (settings.mode == MODE_LIGHTING &&
             lighting_edit_state.is_light_selected) {
-            light_source_update(lighting_edit_state.currently_selected_light,
-                                lighting_edit_transform_get_delta_vector());
+            lighting_light_update(lighting_edit_state.currently_selected_light,
+                                  lighting_edit_transform_get_delta_vector());
         }
 
         render();

@@ -48,8 +48,8 @@ void lighting_edit_selected_light_toggle_enabled(void) {
     assert(light);
     light->is_disabled = !light->is_disabled;
 
-    light_source_update(lighting_edit_state.currently_selected_light,
-                        Vector3Zero());
+    lighting_light_update(lighting_edit_state.currently_selected_light,
+                          Vector3Zero());
 }
 
 void lighting_edit_adding_light_update(float delta_y) {
@@ -60,8 +60,8 @@ void lighting_edit_adding_light_update(float delta_y) {
 
     light->position.y += delta_y;
 
-    light_source_update(lighting_edit_state.currently_added_light,
-                        Vector3Zero());
+    lighting_light_update(lighting_edit_state.currently_added_light,
+                          Vector3Zero());
 }
 
 void lighting_edit_adding_stop(void) {

@@ -35,18 +35,20 @@ static inline void render_scene_properties(void) {
     GuiLabel(title_rect, "Scene");
 
     // Color picker
-    Color before = lighting_scene.ambient_color;
+    Color before = lighting_scene_get_ambient_color();
     Rectangle color_picker_rect =
         ui_properties_menu_reserve_height(picker_height);
     color_picker_rect.width -= 32;
     color_picker_rect.x += 2;
     color_picker_rect.y += 4;
-    GuiColorPicker(color_picker_rect, 0, &lighting_scene.ambient_color);
-    Color after = lighting_scene.ambient_color;
+    Color after = before;
+    GuiColorPicker(color_picker_rect, 0, &after);
 
     if (before.r != after.r || before.b != after.b || before.g != after.g ||
-        before.a != after.a)
-        update_shader_data();
+        before.a != after.a) {
+        lighting_scene_set_ambient_color(after);
+        lighting_shader_data_update();
+    }
 
     ui_properties_menu_reserve_height(spacing_height);
 

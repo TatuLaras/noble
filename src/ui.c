@@ -8,7 +8,6 @@
 #include "terrain_edit.h"
 #include "terrain_textures.h"
 #include <assert.h>
-#include <math.h>
 #include <raylib.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -83,7 +82,7 @@ static inline void render_status_bar(Rectangle rect) {
         }
 
         item_name = terrain_textures_get_name(
-            settings.selected_terrain_textures[settings.current_asset_slot]);
+            terrain_textures_get_slot_handle(settings.current_asset_slot));
     }
 
     char *gizmos = "";

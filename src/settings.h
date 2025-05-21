@@ -34,8 +34,6 @@ typedef struct {
 
     uint8_t current_asset_slot;
     AssetHandle selected_assets[SETTINGS_ASSET_SLOTS_AVAILABLE];
-    TerrainTextureHandle
-        selected_terrain_textures[SETTINGS_ASSET_SLOTS_AVAILABLE];
 } Settings;
 
 extern Settings settings;

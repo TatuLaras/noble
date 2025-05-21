@@ -66,7 +66,8 @@ static inline void focus_selected(Camera *camera) {
                 matrix_get_position(entity_under_cursor->transform);
             break;
         }
-    } // FALLTROUGH
+    }
+        __attribute__((fallthrough));
     case MODE_TERRAIN: {
         RayCollision collision =
             terrain_raycast(GetScreenToWorldRay(GetMousePosition(), *camera));
@@ -328,9 +329,9 @@ void editor_added_light_adjust(float amount, int slow_mode) {
 }
 
 void editor_adjust_grid_density(float amount) {
-    if (amount > 0)
+    if (amount < 0)
         settings.grid_density /= 2;
-    else if (amount < 0)
+    else if (amount > 0)
         settings.grid_density *= 2;
 
     if (settings.grid_density < MIN_GRID_DENSITY)
