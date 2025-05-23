@@ -33,6 +33,13 @@
 
 #define VERTICAL_MOVEMENT_SPEED 3.0
 
+const char terrain_frag_shader[] = {
+#include "../build/data/frag.xxd"
+    , '\0'};
+const char vert_shader[] = {
+#include "../build/data/vert.xxd"
+    , '\0'};
+
 static Camera camera = {
     .position = {0.0f, 6.0f, 6.0f},
     .target = {0.0f, 0.0f, 0.0f},
@@ -402,7 +409,7 @@ int game_init(char *scene_filepath) {
 
     ui_init();
     scene_init();
-    lighting_scene_init(BLACK);
+    lighting_scene_init(BLACK, vert_shader, terrain_frag_shader);
 
     strcpy(settings.asset_directory, settings.project_directory);
     strcat(settings.asset_directory, "assets/");

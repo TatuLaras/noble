@@ -1,6 +1,7 @@
 USE_LOCAL_SYMLINK = no
 NAME = noble
 BUILD_DIR = build
+BUILD_DIR_DATA = build/data
 BUILD_DIR_TESTS = build/tests
 SRC_DIR = src
 SRC_DIR_TESTS = test
@@ -16,7 +17,7 @@ endif
 CC = gcc
 PACKAGES = $(shell pkg-config --libs raylib opengl) -lm
 SANITIZE = -fsanitize=address
-CFLAGS = $(PACKAGES) $(EXTERNAL_INCLUDE) -Wall -Wextra -Wshadow -pedantic -Wstrict-prototypes -march=native -O0
+CFLAGS = $(PACKAGES) $(EXTERNAL_INCLUDE) -Wall -Wextra -Wshadow -pedantic -Wstrict-prototypes -march=native
 CFLAGS_TEST = $(PACKAGES) -DTEST -I$(UNITY_DIR) -I$(SRC_DIR) -I$(EXTERNAL_INCLUDE) -ggdb $(SANITIZE) -std=c23
 
 CFLAGS_DEBUG = $(CFLAGS) -DDEBUG -ggdb
@@ -34,18 +35,25 @@ else
 SRC = $(wildcard $(SRC_DIR)/*.c) $(wildcard lnlibebb/src/*.c)
 endif
 
-debug: $(BUILD_DIR) $(BUILD_DIR)/debug
-release: $(BUILD_DIR) $(BUILD_DIR)/release
+debug: shaders $(BUILD_DIR) $(BUILD_DIR)/debug
+release: shaders $(BUILD_DIR) $(BUILD_DIR)/release
+asan: shaders $(BUILD_DIR) $(BUILD_DIR)/asan
+
 install: release
 	cp $(BUILD_DIR)/release /usr/bin/$(NAME)
-asan: $(BUILD_DIR) $(BUILD_DIR)/asan
 
-run: $(BUILD_DIR) $(BUILD_DIR)/debug
+run: shaders $(BUILD_DIR) $(BUILD_DIR)/debug
 	@echo "WARNING: no address sanitation enabled, consider running with 'make run_asan' when developing."
 	$(BUILD_DIR)/debug $(ARGS)
 
-run_asan: $(BUILD_DIR) $(BUILD_DIR)/asan
+run_asan: shaders $(BUILD_DIR) $(BUILD_DIR)/asan
 	$(BUILD_DIR)/asan $(ARGS)
+
+shaders: $(BUILD_DIR_DATA)
+	xxd -i < libebb/resources/shaders/terrain.frag > $(BUILD_DIR_DATA)/frag.xxd
+	echo ', 0x00' >> $(BUILD_DIR_DATA)frag.xxd
+	xxd -i < libebb/resources/shaders/vertex_lighting.vert > $(BUILD_DIR_DATA)/vert.xxd
+	echo ', 0x00' >> $(BUILD_DIR_DATA)vert.xxd
 
 $(BUILD_DIR)/debug: $(SRC)
 	@echo "INFO: Building debug build"
@@ -62,6 +70,9 @@ $(BUILD_DIR)/asan: $(SRC)
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
+
+$(BUILD_DIR_DATA):
+	mkdir -p $(BUILD_DIR_DATA)
 
 $(BUILD_DIR_TESTS):
 	mkdir -p $(BUILD_DIR_TESTS)
