@@ -17,6 +17,7 @@ typedef struct {
     int quantize_to_grid_enabled;
     float grid_density;
     float grid_height;
+    int mouse_movements_vertical;
     int grid_enabled;
     int fps_controls_enabled;
     int gizmos_enabled;

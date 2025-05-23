@@ -49,11 +49,18 @@ run: shaders $(BUILD_DIR) $(BUILD_DIR)/debug
 run_asan: shaders $(BUILD_DIR) $(BUILD_DIR)/asan
 	$(BUILD_DIR)/asan $(ARGS)
 
-shaders: $(BUILD_DIR_DATA)
-	xxd -i < libebb/resources/shaders/terrain.frag > $(BUILD_DIR_DATA)/frag.xxd
-	echo ', 0x00' >> $(BUILD_DIR_DATA)frag.xxd
+
+shaders: $(BUILD_DIR_DATA)/vert.xxd $(BUILD_DIR_DATA)/frag.xxd
+
+$(BUILD_DIR_DATA)/vert.xxd: $(BUILD_DIR_DATA)
 	xxd -i < libebb/resources/shaders/vertex_lighting.vert > $(BUILD_DIR_DATA)/vert.xxd
 	echo ', 0x00' >> $(BUILD_DIR_DATA)vert.xxd
+
+$(BUILD_DIR_DATA)/frag.xxd: $(BUILD_DIR_DATA)
+	xxd -i < libebb/resources/shaders/terrain.frag > $(BUILD_DIR_DATA)/frag.xxd
+	echo ', 0x00' >> $(BUILD_DIR_DATA)frag.xxd
+
+
 
 $(BUILD_DIR)/debug: $(SRC)
 	@echo "INFO: Building debug build"

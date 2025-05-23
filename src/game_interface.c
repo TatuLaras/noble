@@ -172,6 +172,12 @@ static inline int mouse_inside_properties_menu(void) {
     return 0;
 }
 
+static inline float get_mouse_delta(void) {
+    if (settings.mouse_movements_vertical)
+        return -GetMouseDelta().y;
+    return GetMouseDelta().x;
+}
+
 static inline int mouse_button_pressed(MouseButton button) {
     return IsMouseButtonPressed(button) && !mouse_inside_properties_menu();
 }
@@ -253,7 +259,7 @@ static inline void handle_inputs_lighting(void) {
 
     if (mouse_button_down(MOUSE_BUTTON_LEFT) &&
         lighting_edit_state.is_light_added) {
-        editor_added_light_adjust(GetMouseDelta().x, IsKeyDown(KEY_LEFT_SHIFT));
+        editor_added_light_adjust(get_mouse_delta(), IsKeyDown(KEY_LEFT_SHIFT));
         return;
     }
 
@@ -275,7 +281,7 @@ static inline void handle_inputs_terrain(void) {
     if (IsKeyReleased(KEY_LEFT_ALT))
         EnableCursor();
     if (IsKeyDown(KEY_LEFT_ALT)) {
-        terrain_edit_adjust_tool_radius(GetMouseDelta().x);
+        terrain_edit_adjust_tool_radius(get_mouse_delta());
         return;
     }
 
@@ -329,7 +335,7 @@ static inline void handle_inputs(void) {
         EnableCursor();
 
     if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE) || IsKeyDown(KEY_H)) {
-        orbital_camera_update(&camera);
+        orbital_camera_update(&camera, settings.mouse_movements_vertical);
         return;
     }
 
@@ -369,7 +375,7 @@ static inline void handle_inputs(void) {
         if (mouse_button_pressed(MOUSE_BUTTON_RIGHT))
             editor_cancel_transform();
 
-        editor_transform_adjust(GetMouseDelta().x, IsKeyDown(KEY_LEFT_SHIFT));
+        editor_transform_adjust(get_mouse_delta(), IsKeyDown(KEY_LEFT_SHIFT));
         return;
     }
 
