@@ -164,17 +164,17 @@ static Shortcut shortcuts[] = {
     },
     {
         .action = ACTION_TERRAIN_TOOL_RAISE,
-        .keypresses = {KEY_H},
-        .mode = MODE_TERRAIN,
-    },
-    {
-        .action = ACTION_TERRAIN_TOOL_RAISE_SMOOTH,
         .keypresses = {KEY_J},
         .mode = MODE_TERRAIN,
     },
     {
-        .action = ACTION_TERRAIN_TOOL_SET,
+        .action = ACTION_TERRAIN_TOOL_RAISE_SMOOTH,
         .keypresses = {KEY_K},
+        .mode = MODE_TERRAIN,
+    },
+    {
+        .action = ACTION_TERRAIN_TOOL_SET,
+        .keypresses = {KEY_L},
         .mode = MODE_TERRAIN,
     },
     {

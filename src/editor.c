@@ -62,6 +62,7 @@ static inline void focus_selected(Camera *camera) {
         if (hit_result.result.hit) {
             Entity *entity_under_cursor =
                 scene_get_entity(hit_result.entity_id);
+            assert(entity_under_cursor);
             camera->target =
                 matrix_get_position(entity_under_cursor->transform);
             break;

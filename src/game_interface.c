@@ -312,16 +312,16 @@ static inline void handle_inputs(void) {
         return;
     }
 
-    if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)) {
+    if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE) || IsKeyPressed(KEY_H)) {
         DisableCursor();
         terrain_edit_state.backup_screen_pos =
             (Vector2){GetScreenWidth() / 2.0, GetScreenHeight() / 2.0};
     }
-    if (IsMouseButtonReleased(MOUSE_BUTTON_MIDDLE) &&
+    if ((IsMouseButtonReleased(MOUSE_BUTTON_MIDDLE) || IsKeyReleased(KEY_H)) &&
         transform_operation.mode == TRANSFORM_NONE)
         EnableCursor();
 
-    if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE)) {
+    if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE) || IsKeyDown(KEY_H)) {
         orbital_camera_update(&camera);
         return;
     }
