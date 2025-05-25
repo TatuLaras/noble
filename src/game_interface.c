@@ -50,6 +50,9 @@ static Camera camera = {
 static RenderTexture scene_render_target = {0};
 
 static void render(void) {
+    int render_gizmos =
+        settings.gizmos_enabled && (!settings.fps_controls_enabled);
+
     if (!scene_render_target.id || IsWindowResized()) {
         if (scene_render_target.id)
             UnloadRenderTexture(scene_render_target);
@@ -100,12 +103,12 @@ static void render(void) {
         int is_being_added = entity_adding_state.adding &&
                              entity_adding_state.entity_handle == i - 1;
 
-        if (settings.gizmos_enabled && settings.mode == MODE_NORMAL &&
+        if (render_gizmos && settings.mode == MODE_NORMAL &&
             (is_selected || is_being_added))
             gizmos_render_transform_gizmo(transform);
     }
 
-    if (settings.grid_enabled) {
+    if (settings.grid_enabled && render_gizmos) {
         Vector3 origin = settings_quantize_to_grid(camera.target, 1);
         gizmos_draw_grid(
             80 / settings.grid_density, settings.grid_density,
@@ -130,7 +133,7 @@ static void render(void) {
                                (float)-scene_render_target.texture.height},
                    (Vector2){0, 0}, WHITE);
 
-    if (settings.gizmos_enabled) {
+    if (render_gizmos) {
         switch (settings.mode) {
         case MODE_NORMAL:
             break;
