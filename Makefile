@@ -8,9 +8,9 @@ SRC_DIR_TESTS = test
 UNITY_DIR = external/unity
 
 ifeq ($(USE_LOCAL_SYMLINK),no)
-EXTERNAL_INCLUDE = -Ilibebb/src -Iexternal/include
+EXTERNAL_INCLUDE = -Ilibebb/src -Ilibebb/external -Iexternal/include
 else
-EXTERNAL_INCLUDE = -Ilnlibebb/src -Iexternal/include
+EXTERNAL_INCLUDE = -Ilnlibebb/src -Ilnlibebb/external -Iexternal/include
 endif
 
 
@@ -50,15 +50,12 @@ run_asan: shaders $(BUILD_DIR) $(BUILD_DIR)/asan
 	$(BUILD_DIR)/asan $(ARGS)
 
 shaders: $(BUILD_DIR_DATA)
-	xxd -i < resources/shaders/terrain.frag > $(BUILD_DIR_DATA)/frag.xxd
+	xxd -i < resources/shaders/terrain.frag > $(BUILD_DIR_DATA)/terrain_frag.xxd
+	echo ', 0x00' >> $(BUILD_DIR_DATA)frag.xxd
+	xxd -i < resources/shaders/entity.frag > $(BUILD_DIR_DATA)/entity_frag.xxd
 	echo ', 0x00' >> $(BUILD_DIR_DATA)frag.xxd
 	xxd -i < resources/shaders/vertex_lighting.vert > $(BUILD_DIR_DATA)/vert.xxd
 	echo ', 0x00' >> $(BUILD_DIR_DATA)vert.xxd
-
-$(BUILD_DIR_DATA)/frag.xxd: $(BUILD_DIR_DATA)
-	xxd -i < libebb/resources/shaders/terrain.frag > $(BUILD_DIR_DATA)/frag.xxd
-	echo ', 0x00' >> $(BUILD_DIR_DATA)frag.xxd
-
 
 
 $(BUILD_DIR)/debug: $(SRC)

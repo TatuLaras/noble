@@ -46,7 +46,7 @@ void main()
             texture_selection[i] = 0.0;
     }
 
-    if (shadingDisabled == 1 || vertexColor.x == 0) {
+    if (shadingDisabled == 1) {
         fragColor = vec4(1.0);
         return;
     }
