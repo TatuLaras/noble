@@ -27,7 +27,7 @@ void lighting_edit_adding_light_update(float delta_y);
 void lighting_edit_adding_stop(void);
 
 // Selects the closest light at `screen_position`.
-void lighting_edit_select_light_at(Vector2 screen_position, Camera3D camera);
+void lighting_edit_select_light_at(Vector2 screen_position, Camera camera);
 
 // Starts the transforming process for the currently selected light source. The
 // to-be position can be adjusted through the `transform_operation` struct in

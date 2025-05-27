@@ -69,7 +69,7 @@ void lighting_edit_adding_stop(void) {
     select_light(lighting_edit_state.currently_added_light);
 }
 
-void lighting_edit_select_light_at(Vector2 screen_position, Camera3D camera) {
+void lighting_edit_select_light_at(Vector2 screen_position, Camera camera) {
 
     deselect_lights();
 
