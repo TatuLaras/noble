@@ -7,7 +7,6 @@
 #include "gizmos.h"
 #include "lighting.h"
 #include "lighting_edit.h"
-#include "model_vector.h"
 #include "orbital_controls.h"
 #include "properties_menu.h"
 #include "raymath.h"
@@ -32,16 +31,6 @@
 #include <string.h>
 
 #define VERTICAL_MOVEMENT_SPEED 3.0
-
-const char terrain_frag_shader[] = {
-#include "../build/data/terrain_frag.xxd"
-    , '\0'};
-const char entity_frag_shader[] = {
-#include "../build/data/entity_frag.xxd"
-    , '\0'};
-const char vert_shader[] = {
-#include "../build/data/vert.xxd"
-    , '\0'};
 
 static Camera camera = {
     .position = {0.0f, 6.0f, 6.0f},
@@ -79,7 +68,7 @@ static void render(void) {
         if (entity->is_destroyed)
             continue;
 
-        ModelData *model_data = scene_entity_get_model(entity);
+        Model *model = scene_entity_get_model(entity);
 
         Matrix transform = entity->transform;
 
@@ -97,8 +86,7 @@ static void render(void) {
         if (settings.mode == MODE_TERRAIN)
             rlEnableWireMode();
 
-        DrawMesh(model_data->model.meshes[0], model_data->model.materials[0],
-                 transform);
+        DrawMesh(model->meshes[0], model->materials[0], transform);
 
         if (settings.mode == MODE_TERRAIN)
             rlDisableWireMode();
@@ -412,7 +400,9 @@ static inline void load_scene(void) {
     fclose(fp);
 }
 
-int game_init(char *scene_filepath) {
+int game_init(char *scene_filepath, const char *vertex_shader,
+              const char *entity_frag_shader, const char *terrain_frag_shader,
+              const char *skybox_model) {
     settings.scene_filepath = scene_filepath;
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
@@ -421,8 +411,9 @@ int game_init(char *scene_filepath) {
 
     ui_init();
     scene_init();
-    lighting_scene_init(BLACK, vert_shader, terrain_frag_shader,
-                        entity_frag_shader);
+    lighting_scene_init(BLACK, vertex_shader, entity_frag_shader,
+                        terrain_frag_shader);
+    scene_skybox_init(skybox_model);
 
     strcpy(settings.asset_directory, settings.project_directory);
     strcat(settings.asset_directory, "assets/");
@@ -441,7 +432,7 @@ int game_init(char *scene_filepath) {
 
     terrain_init(50);
     load_scene();
-    scene_load_skybox(settings.skybox_directory);
+    scene_load_selected_skybox(settings.skybox_directory);
     terrain_generate_mesh();
     terrain_textures_load_all_selected(settings.terrain_texture_directory);
     return 0;

@@ -14,7 +14,7 @@ uniform mat4 mvp;
 uniform mat4 matModel;
 uniform mat4 matNormal;
 
-#define MAX_LIGHTS 16
+#define MAX_LIGHTS 64
 
 #define LIGHT_NULL 0
 #define LIGHT_DIRECTIONAL 1
