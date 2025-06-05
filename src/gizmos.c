@@ -135,22 +135,29 @@ void gizmos_render_light_gizmos(Camera camera) {
 
         Vector2 light_pos = GetWorldToScreen(light_3d_pos, camera);
 
-        Vector2 light_base_pos;
+        Vector3 light_base_3d_pos;
         if (light->type == LIGHT_POINT)
-            light_base_pos = GetWorldToScreen(
-                (Vector3){light_3d_pos.x, settings.grid_height, light_3d_pos.z},
-                camera);
+            light_base_3d_pos =
+                (Vector3){light_3d_pos.x, settings.grid_height, light_3d_pos.z};
         else
-            light_base_pos = GetWorldToScreen(Vector3Zero(), camera);
+            light_base_3d_pos = (Vector3){0.1, 0.1, 0.1};
 
-        if (light_3d_pos.y < settings.grid_height &&
-            light_base_pos.y > light_pos.y)
-            continue;
-        if (light_3d_pos.y > settings.grid_height &&
-            light_base_pos.y < light_pos.y)
+        Vector3 camera_forward =
+            Vector3Subtract(camera.target, camera.position);
+        int is_light_behind_camera =
+            Vector3DotProduct(camera_forward,
+                              Vector3Subtract(light_3d_pos, camera.position)) <
+            0;
+        int is_base_behind_camera =
+            Vector3DotProduct(
+                camera_forward,
+                Vector3Subtract(light_base_3d_pos, camera.position)) < 0;
+        if (is_light_behind_camera)
             continue;
 
-        DrawLineEx(light_pos, light_base_pos, 2.0, light->color);
+        if (!is_base_behind_camera)
+            DrawLineEx(light_pos, GetWorldToScreen(light_base_3d_pos, camera),
+                       2.0, light->color);
 
         DrawCircle(light_pos.x, light_pos.y, 6, light->color);
 

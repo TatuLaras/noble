@@ -99,12 +99,11 @@ static inline void render_light_properties(void) {
 
     LightSource *light =
         lighting_scene_get_light(lighting_edit_state.currently_selected_light);
-    if (!light)
+    if (!light || light->type == LIGHT_NULL)
         return;
 
     uint16_t title_height = 20;
     uint16_t picker_height = 120;
-    uint16_t spacing_height = 0;
     uint16_t slider_height = 40;
 
     Rectangle title_rect = ui_properties_menu_reserve_height(title_height);
@@ -118,7 +117,7 @@ static inline void render_light_properties(void) {
     color_picker_rect.y += 4;
     GuiColorPicker(color_picker_rect, 0, &light->color);
 
-    ui_properties_menu_reserve_height(spacing_height);
+    ui_properties_menu_reserve_height(5);
 
     slider_input("Intensity", &light->intensity, 0.0, 30.0, slider_height);
     slider_input("Intensity granular", &light->intensity_granular, 0.0, 2.0,
@@ -126,14 +125,23 @@ static inline void render_light_properties(void) {
     slider_input("Intensity cap", &light->intensity_cap, 0.0, 10.0,
                  slider_height);
 
-    static int is_directional = 0;
-    Rectangle directional_checkbox_rect = ui_properties_menu_reserve_height(30);
-    GuiCheckBox(directional_checkbox_rect, "Directional", &is_directional);
+    ui_properties_menu_reserve_height(10);
+
+    int is_directional = light->type == LIGHT_DIRECTIONAL;
+    Rectangle directional_checkbox_rect = ui_properties_menu_reserve_height(20);
+    directional_checkbox_rect.width = 20;
+    GuiCheckBox(directional_checkbox_rect, "Directional",
+                (bool *)&is_directional);
 
     if (is_directional)
         light->type = LIGHT_DIRECTIONAL;
     else
         light->type = LIGHT_POINT;
+
+    Rectangle is_enabled_checkbox_rect = ui_properties_menu_reserve_height(20);
+    is_enabled_checkbox_rect.width = 20;
+    GuiCheckBox(is_enabled_checkbox_rect, "Disabled",
+                (bool *)&light->is_disabled);
 
     ui_properties_menu_reserve_section_end();
 }

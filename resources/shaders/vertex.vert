@@ -17,8 +17,8 @@ uniform mat4 matNormal;
 #define MAX_LIGHTS 64
 
 #define LIGHT_NULL 0
-#define LIGHT_DIRECTIONAL 1
-#define LIGHT_POINT 2
+#define LIGHT_POINT 1
+#define LIGHT_DIRECTIONAL 2
 
 struct LightSource {
     int enabled;
@@ -60,14 +60,21 @@ void main()
         if (lights[i].type == LIGHT_NULL) break;
         if (lights[i].enabled == 0) continue;
 
-        vec3 lightDirection = normalize(lights[i].position - transformedVertexPosition);
+        if (lights[i].type == LIGHT_POINT) {
+            vec3 lightDirection = normalize(lights[i].position - transformedVertexPosition);
 
-        float lightIntensity = max(dot(lightDirection, transformedVertexNormal), 0.0);
-        float r = distance(transformedVertexPosition, lights[i].position);
-        lightIntensity *= lights[i].intensity / pow(r, 2);
-        lightIntensity = min(lightIntensity, lights[i].intensity_cap);
+            float lightIntensity = max(dot(lightDirection, transformedVertexNormal), 0.0);
+            float r = distance(transformedVertexPosition, lights[i].position);
+            lightIntensity *= lights[i].intensity / pow(r, 2);
+            lightIntensity = min(lightIntensity, lights[i].intensity_cap);
 
-        light += vec3(lights[i].color) * lightIntensity;
+            light += vec3(lights[i].color) * lightIntensity;
+        } else if (lights[i].type == LIGHT_DIRECTIONAL) {
+            vec3 lightDirection = normalize(lights[i].position);
+            float lightIntensity = max(dot(lightDirection, transformedVertexNormal), 0.0);
+            lightIntensity *= lights[i].intensity;
+            light += vec3(lights[i].color) * lightIntensity;
+        }
     }
 
     light += vec3(ambient);
