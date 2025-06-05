@@ -1,16 +1,15 @@
 /*
  *   noble - a scene editor for retro game development
  */
+
 #include "game_interface.h"
 #include "settings.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 int main(int argc, char **argv) {
-
     char *scene_filepath = 0;
     for (int i = 1; i < argc; i++) {
         // CLI args..
@@ -28,6 +27,10 @@ int main(int argc, char **argv) {
         scene_filepath = argv[i];
         break;
     }
+
+#ifndef NO_HOT_RELOAD
+    printf("INFO: Hot reload enabled.\n");
+#endif
 
 // Resource file paths
 #ifdef DEBUG

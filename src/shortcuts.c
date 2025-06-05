@@ -52,12 +52,12 @@ static Shortcut shortcuts[] = {
     {.action = ACTION_OBJECT_DELETE, .keypresses = {KEY_DELETE}},
     {.action = ACTION_OBJECT_DELETE, .keypresses = {KEY_BACKSPACE}},
     {
-        .action = ACTION_LIGHT_TOGGLE_ENABLED,
+        .action = ACTION_LIGHT_DELETE,
         .keypresses = {KEY_DELETE},
         .mode = MODE_LIGHTING,
     },
     {
-        .action = ACTION_LIGHT_TOGGLE_ENABLED,
+        .action = ACTION_LIGHT_DELETE,
         .keypresses = {KEY_BACKSPACE},
         .mode = MODE_LIGHTING,
     },

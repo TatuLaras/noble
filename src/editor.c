@@ -95,6 +95,13 @@ static inline void delete_selected_object(void) {
     }
 }
 
+static inline void delete_selected_light(void) {
+    if (!lighting_edit_state.is_light_selected)
+        return;
+
+    lighting_scene_remove_light(lighting_edit_state.currently_selected_light);
+}
+
 static inline void set_asset_slot(uint8_t slot) {
     settings.current_asset_slot = slot;
 }
@@ -159,8 +166,8 @@ void editor_execute_action(ShortcutAction action, Camera *camera) {
     case ACTION_OBJECT_DELETE:
         delete_selected_object();
         break;
-    case ACTION_LIGHT_TOGGLE_ENABLED:
-        lighting_edit_selected_light_toggle_enabled();
+    case ACTION_LIGHT_DELETE:
+        delete_selected_light();
         break;
 
     case ACTION_START_PICKING_ASSET:
@@ -309,7 +316,10 @@ void editor_instantiate_object(Ray ray, int copy_rotation) {
         return;
 
     Entity *entity = scene_get_entity(entity_adding_state.entity_handle);
-    lighting_scene_add_entity(entity);
+    Model *model = scene_entity_get_model(entity);
+    assert(model->meshCount);
+    assert(model->materialCount);
+    model->materials[0].shader = lighting_scene_get_base_shader();
 }
 
 void editor_transform_adjust(float amount, int slow_mode) {

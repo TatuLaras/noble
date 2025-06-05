@@ -22,7 +22,6 @@
 #include "terrain_textures.h"
 #include "transform.h"
 #include "ui.h"
-#include <assert.h>
 #include <raylib.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -404,6 +403,7 @@ int game_init(char *scene_filepath, const char *vertex_shader,
               const char *entity_frag_shader, const char *terrain_frag_shader,
               const char *skybox_model) {
     settings.scene_filepath = scene_filepath;
+    SetTraceLogLevel(LOG_WARNING);
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(800, 450, "Noble");
@@ -447,6 +447,7 @@ void game_main(void) {
                                   lighting_edit_transform_get_delta_vector());
         }
 
+        scene_check_for_model_file_updates();
         render();
         handle_inputs();
         ui_properties_menu_reset();

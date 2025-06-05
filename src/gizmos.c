@@ -134,9 +134,14 @@ void gizmos_render_light_gizmos(Camera camera) {
         }
 
         Vector2 light_pos = GetWorldToScreen(light_3d_pos, camera);
-        Vector2 light_base_pos = GetWorldToScreen(
-            (Vector3){light_3d_pos.x, settings.grid_height, light_3d_pos.z},
-            camera);
+
+        Vector2 light_base_pos;
+        if (light->type == LIGHT_POINT)
+            light_base_pos = GetWorldToScreen(
+                (Vector3){light_3d_pos.x, settings.grid_height, light_3d_pos.z},
+                camera);
+        else
+            light_base_pos = GetWorldToScreen(Vector3Zero(), camera);
 
         if (light_3d_pos.y < settings.grid_height &&
             light_base_pos.y > light_pos.y)

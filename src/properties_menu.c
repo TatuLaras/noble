@@ -126,6 +126,15 @@ static inline void render_light_properties(void) {
     slider_input("Intensity cap", &light->intensity_cap, 0.0, 10.0,
                  slider_height);
 
+    static int is_directional = 0;
+    Rectangle directional_checkbox_rect = ui_properties_menu_reserve_height(30);
+    GuiCheckBox(directional_checkbox_rect, "Directional", &is_directional);
+
+    if (is_directional)
+        light->type = LIGHT_DIRECTIONAL;
+    else
+        light->type = LIGHT_POINT;
+
     ui_properties_menu_reserve_section_end();
 }
 
